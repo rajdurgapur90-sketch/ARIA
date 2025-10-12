@@ -1148,7 +1148,7 @@
                 </div>
             </div>
 
-            <div class="experiences-section">
+            <div class="experiences-section" id="ar-modes">
                 <h2 class="section-title">AR Modes</h2>
                 <div class="experiences-grid">
                     <div class="experience-card" onclick="showInfoModal(0)">
@@ -1160,7 +1160,7 @@
                         </div>
                         <div class="experience-overlay">
                             <button class="visit-button">
-                                <i data-feather="choose_blank_or_live.html"></i>
+                                <i data-feather="external-link"></i>
                                 <span>View Details</span>
                             </button>
                         </div>
@@ -1228,7 +1228,7 @@
                     style="background: rgba(0, 0, 0, 0.4); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem; border: 1px solid rgba(147, 51, 234, 0.3);">
                     <img id="infoImage" src="" alt="Project"
                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.75rem;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
                         <div>
                             <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;">Status</p>
                             <p id="infoStatus" style="color: #10b981; font-weight: 600; font-size: 0.75rem;">Active</p>
@@ -1248,9 +1248,9 @@
                         </div>
                     </div>
                     <div>
-                        <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem; margin-top: 0.5rem;">
+                        <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem; margin-top: 1rem;">
                             Description</p>
-                        <p id="infoDescription" style="color: #d1d5db; line-height: 1.6; font-size: 0.75rem;">Loading...
+                        <p id="infoDescription" style="color: #d1d5db; line-height: 1.6; font-size: 0.85rem;">Loading...
                         </p>
                     </div>
                 </div>
@@ -1283,6 +1283,8 @@
                 }
             ]
         };
+
+        let currentExperienceUrl = ''; // To store the URL of the selected experience
 
         feather.replace();
 
@@ -1401,6 +1403,27 @@
                 feather.replace();
             }
         }
+        
+        function showCustomAlert(title, message) {
+            const alertModal = document.createElement('div');
+            alertModal.className = 'modal active';
+            alertModal.style.zIndex = '2000'; // Ensure it's on top of other elements
+            alertModal.innerHTML = `
+                <div class="modal-content">
+                    <h2 style="margin-bottom: 1rem;">${title}</h2>
+                    <p style="margin-bottom: 1.5rem;">${message}</p>
+                    <button class="modal-button" onclick="this.closest('.modal').remove()">OK</button>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+
+            alertModal.addEventListener('click', (e) => {
+                if (e.target === alertModal) {
+                    alertModal.remove();
+                }
+            });
+        }
+
 
         function handleRegister() {
             const username = document.getElementById('username').value;
@@ -1454,7 +1477,7 @@
 
             if (!hasErrors) {
                 state.registeredUsers.push({ username, email, password });
-                alert('✨ Registration successful! Please login with your credentials.');
+                showCustomAlert('✨ Registration successful!', 'Please login with your new credentials.');
                 toggleAuthMode();
                 document.getElementById('authForm').reset();
             }
@@ -1509,13 +1532,13 @@
 
                 if (type === 'text') {
                     this.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>`;
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>`;
                 } else {
                     this.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>`;
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>`;
                 }
             });
         }
@@ -1569,7 +1592,8 @@
                 date: "2024-01-15",
                 views: "2,847",
                 rating: "4.9 ⭐",
-                description: "An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models. Users can explore every detail of the product in augmented reality, rotate, zoom, and see technical specifications in real-time."
+                description: "An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models. Users can explore every detail of the product in augmented reality, rotate, zoom, and see technical specifications in real-time.",
+                url: "Model_Viewer.html"
             },
             {
                 title: "3D Shape Playground",
@@ -1578,7 +1602,8 @@
                 date: "2024-02-20",
                 views: "1,523",
                 rating: "4.7 ⭐",
-                description: "Next-generation metaverse experience featuring full VR immersion with haptic feedback support. Enter virtual worlds with unprecedented realism and interact with digital environments like never before."
+                description: "Next-generation metaverse experience featuring full VR immersion with haptic feedback support. Enter virtual worlds with unprecedented realism and interact with digital environments like never before.",
+                url: "Shape_Interaction.html"
             },
             {
                 title: "AR Portal",
@@ -1587,7 +1612,8 @@
                 date: "2023-12-10",
                 views: "3,891",
                 rating: "4.8 ⭐",
-                description: "Revolutionary architectural visualization tool allowing clients to walk through buildings before construction. Features real-time lighting, material changes, and spatial planning capabilities in augmented reality."
+                description: "Revolutionary architectural visualization tool allowing clients to walk through buildings before construction. Features real-time lighting, material changes, and spatial planning capabilities in augmented reality.",
+                url: "Portal_shortcut.html"
             },
             {
                 title: "AR Mini Game",
@@ -1596,13 +1622,17 @@
                 date: "2024-03-05",
                 views: "5,234",
                 rating: "4.9 ⭐",
-                description: "Engaging AR gaming experience that blends virtual characters with real-world environments. Features multiplayer support, location-based gameplay, and dynamic difficulty adjustment for maximum fun."
+                description: "Engaging AR gaming experience that blends virtual characters with real-world environments. Features multiplayer support, location-based gameplay, and dynamic difficulty adjustment for maximum fun.",
+                url: "ar-game.html"
             }
         ];
 
         function showInfoModal(index) {
             const project = projectData[index];
             const modal = document.getElementById('infoModal');
+
+            // Store the URL for the launch button
+            currentExperienceUrl = project.url;
 
             document.getElementById('infoTitle').textContent = project.title;
             document.getElementById('infoImage').src = project.image;
@@ -1622,36 +1652,24 @@
         }
 
         function launchExperience() {
-            const modal = document.getElementById('infoModal');
-            modal.classList.remove('active');
-
-            setTimeout(() => {
-                const successModal = document.createElement('div');
-                successModal.className = 'modal active';
-                successModal.innerHTML = `
-                    <div class="modal-content">
-                        <h2>🚀 Launching AR Experience</h2>
-                        <p>Initializing augmented reality environment...</p>
-                        <button class="modal-button" onclick="this.closest('.modal').remove()">Close</button>
-                    </div>
-                `;
-                document.body.appendChild(successModal);
-
-                successModal.addEventListener('click', (e) => {
-                    if (e.target === successModal) {
-                        successModal.remove();
-                    }
-                });
-            }, 300);
+            if (currentExperienceUrl) {
+                window.location.href = currentExperienceUrl;
+            } else {
+                console.error("Error: No experience URL is set.");
+                // Optionally show a custom alert to the user
+                showCustomAlert('Launch Error', 'Could not find the URL for this experience.');
+            }
         }
 
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                const href = this.getAttribute('href');
-                if (href === '#dashboard' || href === '#ar-modes' || href === '#analytics' || href === '#settings') {
-                    document.getElementById('navRight').classList.remove('active');
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
                 }
+                document.getElementById('navRight').classList.remove('active');
             });
         });
 
