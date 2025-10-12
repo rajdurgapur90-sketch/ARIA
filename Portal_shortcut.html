@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Applying the animated gradient background */
+            background: linear-gradient(-45deg, #1e0b3a, #2c0f4d, #0f0517, #000000);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            overflow: hidden; /* Hide scrollbars from the starry background */
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .portal-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            /* Frosted glass effect */
+            background-color: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+        }
+
+        .portal-card:hover {
+            transform: translateY(-8px);
+            /* Purple glow effect */
+            box-shadow: 0 0 25px 5px rgba(192, 132, 252, 0.4);
+            border-color: rgba(192, 132, 252, 0.8);
+        }
+
+        .hover-tooltip {
+            position: absolute;
+            bottom: calc(100% + 10px); /* Position it 10px above the card */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(26, 2, 54, 0.85); /* Dark purple, semi-transparent */
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(192, 132, 252, 0.5); /* Faint purple border */
+            color: #e5e7eb; /* Light gray text */
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            width: 300px; /* Fixed width for better formatting */
+            max-width: 90vw;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .portal-card:hover .hover-tooltip {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(100% + 20px); /* Move it up a bit on hover for a nice effect */
+        }
+
+        /* Starry background effect */
+        #stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle linear infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-white flex flex-col items-center justify-center min-h-screen p-6 relative">
+
+    <!-- Starry background container -->
+    <div id="stars"></div>
+    
+    <!-- Project Name in the corner -->
+    <header class="absolute top-0 left-0 w-full p-6 md:p-8">
+        <h1 class="text-2xl font-bold tracking-wider text-white">ARIA</h1>
+    </header>
+
+    <div class="text-center mb-10 z-10">
+        <h1 class="text-5xl font-bold mb-3">Unlock world</h1>
+        <p class="text-gray-300">Launch the experience on your mobile device.</p>
+    </div>
+
+    <div class="portal-card rounded-lg p-8 sm:p-12 flex flex-col items-center justify-center text-center w-full max-w-md z-10">
+        <div class="hover-tooltip">
+            This experience is for mobile. Tap 'Launch Portal' on a phone, or scan the QR code from a desktop.
+        </div>
+
+        <!-- Link Button -->
+        <a href="https://rajsen.8thwall.app/immerse/" target="_blank" rel="noopener noreferrer" class="mb-8 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105 duration-300 inline-flex items-center shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"></path></svg>
+            Launch Portal
+        </a>
+        
+        <!-- QR Code -->
+        <div class="bg-white p-4 rounded-lg shadow-md">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://rajsen.8thwall.app/immerse/" alt="AR Portal QR Code" width="200" height="200">
+        </div>
+        <p class="text-gray-400 mt-4 text-sm">Scan Me</p>
+    </div>
+
+    <div class="mt-12 text-center z-10">
+        <a href="UserDashboard.html" class="text-gray-400 hover:text-white transition-colors duration-300 inline-flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const starsContainer = document.getElementById('stars');
+
+            // --- Starry Background Logic ---
+            const createStars = () => {
+                const starCount = 150;
+                for (let i = 0; i < starCount; i++) {
+                    const star = document.createElement('div');
+                    star.classList.add('star');
+                    
+                    const size = Math.random() * 3 + 1;
+                    star.style.width = `${size}px`;
+                    star.style.height = `${size}px`;
+
+                    star.style.top = `${Math.random() * 100}%`;
+                    star.style.left = `${Math.random() * 100}%`;
+
+                    const duration = Math.random() * 2 + 3; // Twinkle duration between 3s and 5s
+                    const delay = Math.random() * 3; // Start twinkling at different times
+                    star.style.animationDuration = `${duration}s`;
+                    star.style.animationDelay = `${delay}s`;
+
+                    starsContainer.appendChild(star);
+                }
+            };
+            createStars();
+        });
+    </script>
+
+</body>
+</html>
+
+
+

@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Controlled 3D Viewer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Three.js (Core) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Load GLTFLoader for 3D models -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- MediaPipe Tasks Vision Library for hand tracking -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js"></script>
+    <style>
+        /* --- ARIA Theme Integration --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #1e0b3a, #2c0f4d, #0f0517, #000000);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #stars {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+        }
+        .star {
+            position: absolute; background-color: white; border-radius: 50%; animation: twinkle linear infinite;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+        /* --- End ARIA Theme --- */
+
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #three-container canvas { cursor: grab; }
+        #hand-overlay { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 50; }
+
+        #fab-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 100; }
+        #sub-fab-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 99;
+            pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; height: 60px;
+        }
+        #sub-fab-overlay.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+
+        .fab-button {
+            width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease-in-out, background-color 0.2s, filter 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .fab-button:active { transform: scale(0.95); filter: brightness(85%); }
+        #main-fab svg { transition: transform 0.3s ease-in-out; }
+        #main-fab { z-index: 10; }
+
+        .sub-fab {
+            opacity: 0; visibility: hidden; transform: scale(0.5); 
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: absolute; top: 50%; left: 50%; margin-top: -27.5px; margin-left: -27.5px;
+        }
+
+        .gesture-highlight { 
+            box-shadow: 0 0 25px 8px rgba(192, 132, 252, 0.7); /* Purple glow */
+        }
+        
+        .hands-toggled-off { background-color: #4b5563 !important; opacity: 0.7; }
+        .soft-locked { background-color: #ef4444 !important; } /* Red-500 */
+        .hard-locked { background-color: #4b5563 !important; } /* Gray-600 */
+
+        .fab-label {
+            position: absolute; top: -10px; left: 50%; transform: translate(-50%, -100%); padding: 6px 12px;
+            background-color: rgba(17, 24, 39, 0.95); color: white; border-radius: 5px;
+            font-size: 14px; white-space: nowrap; opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none; visibility: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .sub-fab:hover .fab-label,
+        .sub-fab.gesture-highlight .fab-label { 
+            opacity: 1; transform: translate(-50%, -120%); visibility: visible; 
+        }
+
+        #sub-fab-overlay.visible .sub-fab { opacity: 1; visibility: visible; transform: scale(1); }
+        
+        /* Position 12 sub-buttons in a 4x3 grid */
+        #sub-fab-overlay.visible #sub-1 { transform: translate(-105px, -70px) scale(1); }
+        #sub-fab-overlay.visible #sub-2 { transform: translate(-35px, -70px) scale(1); }
+        #sub-fab-overlay.visible #sub-3 { transform: translate(35px, -70px) scale(1); }
+        #sub-fab-overlay.visible #sub-4 { transform: translate(105px, -70px) scale(1); }
+        #sub-fab-overlay.visible #sub-5 { transform: translate(-105px, 0px) scale(1); }
+        #sub-fab-overlay.visible #sub-6 { transform: translate(-35px, 0px) scale(1); }
+        #sub-fab-overlay.visible #sub-7 { transform: translate(35px, 0px) scale(1); }
+        #sub-fab-overlay.visible #sub-8 { transform: translate(105px, 0px) scale(1); }
+        #sub-fab-overlay.visible #sub-9 { transform: translate(-105px, 70px) scale(1); }
+        #sub-fab-overlay.visible #sub-10 { transform: translate(-35px, 70px) scale(1); }
+        #sub-fab-overlay.visible #sub-11 { transform: translate(35px, 70px) scale(1); }
+        #sub-fab-overlay.visible #sub-12 { transform: translate(105px, 70px) scale(1); }
+
+
+        /* --- Guide Modal & Annotation Styling (Themed) --- */
+        #guide-modal, #annotation-details-modal, .annotation-window {
+            background-color: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(192, 132, 252, 0.8);
+        }
+
+        #guide-modal, #annotation-details-modal {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%; max-width: 450px; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 2rem; z-index: 200; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s;
+            color: #e5e7eb;
+        }
+        #guide-modal.visible, #annotation-details-modal.visible { opacity: 1; visibility: visible; }
+        
+        #guide-modal h2, #annotation-details-modal h2 {
+            text-align: center; font-size: 1.5em; font-weight: bold; color: white; margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(192, 132, 252, 0.5); padding-bottom: 0.75rem;
+        }
+        #guide-modal ul, #annotation-details-modal ul { list-style: none; padding: 0; margin: 0; }
+        #guide-modal li, #annotation-details-modal li { 
+            display: flex; align-items: flex-start; margin-bottom: 1.2em; font-size: 1em; 
+        }
+        #guide-modal li strong, #annotation-details-modal li strong { 
+            color: #c084fc; width: 130px; flex-shrink: 0; margin-right: 10px;
+        }
+
+        #annotation-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60;
+        }
+        .annotation { position: absolute; opacity: 0; transition: opacity 0.3s ease; }
+        .annotation.visible { opacity: 1; }
+        .annotation-window {
+            padding: 10px 14px;
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 220px; /* Increased width for more text */
+            white-space: normal; /* Allow text to wrap to multiple lines */
+            overflow: hidden;
+            line-height: 1.4; /* Improve readability */
+        }
+        .annotation-title {
+            font-weight: bold;
+            color: #c084fc; /* Theme color */
+            margin-bottom: 5px;
+            display: block;
+            border-bottom: 1px solid rgba(192, 132, 252, 0.3);
+            padding-bottom: 4px;
+        }
+        .annotation-line { stroke: #c084fc; stroke-width: 1.5; stroke-dasharray: 4 2; }
+        .annotation-dot { fill: #c084fc; }
+
+
+        /* --- CSS 3D Cube Loader (Themed) --- */
+        #loading-overlay { background-color: rgba(15, 5, 23, 0.8); } /* Dark purple transparent */
+        #loading-cube-container { width: 50px; height: 50px; perspective: 400px; margin-bottom: 2rem; }
+        #loading-cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: rotate-cube 8s infinite linear; }
+        .cube-face {
+            position: absolute; width: 50px; height: 50px;
+            border: 1px solid #c084fc;
+            background-color: rgba(192, 132, 252, 0.1);
+            box-shadow: 0 0 10px rgba(192, 132, 252, 0.5);
+        }
+        .face-front  { transform: rotateY(0deg) translateZ(25px); }
+        .face-back   { transform: rotateY(180deg) translateZ(25px); }
+        .face-left   { transform: rotateY(-90deg) translateZ(25px); }
+        .face-right  { transform: rotateY(90deg) translateZ(25px); }
+        .face-top    { transform: rotateX(90deg) translateZ(25px); }
+        .face-bottom { transform: rotateX(-90deg) translateZ(25px); }
+
+        @keyframes rotate-cube {
+            from { transform: rotateX(0deg) rotateY(0deg); }
+            to { transform: rotateX(360deg) rotateY(360deg); }
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Starry background will be injected here by JS -->
+    <div id="stars"></div>
+    <!-- Container for the Three.js scene -->
+    <div id="three-container"></div>
+    <!-- Canvas for drawing hand landmarks over the scene -->
+    <canvas id="hand-overlay"></canvas>
+    <!-- Container for HTML-based annotations -->
+    <div id="annotation-container"></div>
+
+    <!-- Mode indicator text at top right -->
+    <div id="mode-indicator" class="fixed top-4 right-4 bg-black bg-opacity-40 text-white text-sm py-1 px-3 rounded-md z-50">Default Mode</div>
+
+    <!-- Loading indicator -->
+    <div id="loading-overlay" class="fixed inset-0 flex flex-col items-center justify-center z-40">
+        <div id="loading-cube-container">
+            <div id="loading-cube">
+                <div class="cube-face face-front"></div>
+                <div class="cube-face face-back"></div>
+                <div class="cube-face face-left"></div>
+                <div class="cube-face face-right"></div>
+                <div class="cube-face face-top"></div>
+                <div class="cube-face face-bottom"></div>
+            </div>
+        </div>
+        <span id="loading-text" class="text-white text-lg text-center mt-4 px-4" style="animation: pulse-text 2s infinite ease-in-out;">Initializing Experience...</span>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="model-input" accept=".glb,.gltf" style="display: none;">
+    
+    <!-- NEW: Annotation Details Button (Top-Left) -->
+    <div id="annotation-details-button-container" class="fixed top-4 left-4 z-50 hidden">
+        <div id="annotation-details-button" class="fab-button bg-purple-600 bg-opacity-50 hover:bg-opacity-100" data-action="show-annotation-details">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+    </div>
+    
+    <!-- Main FAB in corner (Themed) -->
+    <div id="fab-container">
+        <div id="main-fab" class="fab-button bg-purple-600 hover:bg-purple-700 text-white">
+            <svg id="fab-icon-unlocked" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+            <svg id="fab-icon-locked" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+    </div>
+
+    <!-- Centered overlay for sub-buttons (Themed) -->
+    <div id="sub-fab-overlay">
+        <div id="sub-1" class="sub-fab bg-teal-500 hover:bg-teal-600 text-white fab-button" data-action="toggle-camera"><span class="fab-label">Camera BG</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
+        <div id="sub-2" class="sub-fab bg-cyan-500 hover:bg-cyan-600 text-white fab-button" data-action="switch-camera"><span class="fab-label">Switch Cam</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5H20a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-7"/><path d="m3 16 3-3 1.5 1.5M13 8l3 3-4 4h-3v-3l4-4Z"/></svg></div>
+        <div id="sub-3" class="sub-fab bg-blue-500 hover:bg-blue-600 text-white fab-button" data-action="upload-model"><span class="fab-label">Upload</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <div id="sub-4" class="sub-fab bg-pink-500 hover:bg-pink-600 text-white fab-button" data-action="play-animation"><span class="fab-label">Animate</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+        <div id="sub-5" class="sub-fab bg-purple-500 hover:bg-purple-600 text-white fab-button" data-action="toggle-autorotate"><span class="fab-label">Rotate</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-8-8"/><path d="M20 12v3h-3"/></svg></div>
+        <div id="sub-6" class="sub-fab bg-green-500 hover:bg-green-600 text-white fab-button" data-action="add-annotations"><span class="fab-label">Annotate</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line></svg></div>
+        <div id="sub-7" class="sub-fab bg-red-500 hover:bg-red-600 text-white fab-button" data-action="reset-scene"><span class="fab-label">Reset</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 0-8-8v8h8z"/><path d="M20 12h-8V4A8 8 0 1 0 20 12z"/></svg></div>
+        <div id="sub-8" class="sub-fab bg-indigo-500 hover:bg-indigo-600 text-white fab-button" data-action="show-guide"><span class="fab-label">Guide</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div id="sub-9" class="sub-fab bg-yellow-500 hover:bg-yellow-600 text-white fab-button" data-action="soft-lock-menu"><span class="fab-label">Soft Lock</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+        <div id="sub-10" class="sub-fab bg-gray-500 hover:bg-gray-600 text-white fab-button" data-action="hard-lock-all"><span class="fab-label">Master Lock</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+        <div id="sub-11" class="sub-fab bg-sky-500 hover:bg-sky-600 text-white fab-button" data-action="user-panel"><span class="fab-label">User Panel</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+        <div id="sub-12" class="sub-fab bg-fuchsia-500 hover:bg-fuchsia-600 text-white fab-button" data-action="toggle-hands"><span class="fab-label">Toggle Hands</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></div>
+    </div>
+
+    <!-- Gesture Guide Modal -->
+    <div id="guide-modal">
+        <h2>Gesture Guide</h2>
+        <ul>
+            <li><strong>Menu:</strong> Punch gesture or click main button</li>
+            <li><strong>Click Button:</strong> Touch Thumb to Index Finger Joint</li>
+            <li><strong>Lock Status:</strong> Hand points change color (Red/Gray)</li>
+            <li><strong>Annotate:</strong> Toggle 5 random info points on the model</li>
+            <li><strong>Soft Lock:</strong> Freezes menu. Main button turns red. Unlock with gesture or click.</li>
+            <li><strong>Master Lock:</strong> Disables gestures. Main button turns gray. Click gray button to unlock.</li>
+            <li><strong>Reset Scene:</strong> Return model to its original state</li>
+            <li><strong>Drag Model:</strong> Pinch Thumb + Index Tip</li>
+            <li><strong>Rotate Model:</strong> Join Index + Middle Finger Tips</li>
+            <li><strong>Scale Model:</strong> Pinch with Two Hands</li>
+            <li><strong>Drag Guide:</strong> Pinch to drag the guide window</li>
+            <li><strong>Scale Guide:</strong> Pinch with two hands to scale</li>
+            <li><strong>Close Guide:</strong> "Click" or "Punch" gesture</li>
+        </ul>
+    </div>
+
+    <!-- NEW: Annotation Details Modal -->
+    <div id="annotation-details-modal">
+        <h2>Annotation Details</h2>
+        <ul id="annotation-details-list">
+            <!-- Details will be populated by JS -->
+        </ul>
+    </div>
+
+    <script type="module">
+        import { HandLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
+
+        // --- Global Variables ---
+        let scene, camera, renderer, currentObject, gltfLoader, loadingManager;
+        let videoElement, videoTexture, isVideoBackground = false;
+        const originalBackgroundColor = new THREE.Color(0x1e0b3a); // Themed background color
+        const clock = new THREE.Clock();
+        let animationMixer, animationClips = [], currentAction = null;
+        let currentFacingMode = 'user';
+
+        let handLandmarker, handOverlayCanvas, handOverlayCtx, drawingUtils;
+        let lastVideoTime = -1, handLandmarkerReady = false;
+        
+        let loadingOverlay, modelInput, subFabOverlay, guideModal, modeIndicator, annotationContainer;
+        let annotationDetailsButtonContainer, annotationDetailsButton, annotationDetailsModal; // NEW
+        let clickDebounce = false, punchDebounce = false, specialClickDebounce = false;
+        let highlightedFab = null;
+        let interactionState = 'idle';
+        let rotateLastHandPos = new THREE.Vector2();
+        let scaleInitialPinchDist = null, scaleInitialModelScale = null;
+        let dragOffset = new THREE.Vector3();
+        let isGuideModalVisible = false;
+        let guideModalDragOffset = { x: 0, y: 0 }, isDraggingGuide = false;
+        let guideModalScaleInitialPinchDist = null, guideModalInitialScale = 1;
+        let guideModalTransform = { x: 0, y: 0, scale: 1 };
+        let isAnnotationDetailsModalVisible = false; // NEW
+        let annotationDetailsModalTransform = { x: 0, y: 0, scale: 1 }; // NEW
+        let isSoftLocked = false, isHardLocked = false, isAutoRotating = false, isAnimationMode = false;
+        let initialModelPosition, initialModelRotation, initialModelScale;
+        let annotations = [], annotationsVisible = false;
+        let areHandsVisible = true;
+        
+        // --- Initialization and Setup ---
+        function setLoading(isLoading, text = "Processing...") {
+            loadingOverlay.querySelector('#loading-text').textContent = text;
+            loadingOverlay.style.display = isLoading ? 'flex' : 'none';
+        }
+
+        function stopVideoStream() {
+            if (videoElement && videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+            if (videoTexture) {
+                videoTexture.dispose();
+                videoTexture = null;
+            }
+        }
+
+        function disposeCurrentObject() {
+            if (currentObject) {
+                scene.remove(currentObject);
+                currentObject.traverse(child => {
+                    if (child.isMesh) {
+                        child.geometry.dispose();
+                        if (child.material.isMaterial) child.material.dispose();
+                        else if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    }
+                });
+            }
+            animationMixer = null; animationClips = []; currentAction = null;
+        }
+
+        function loadModel(modelInfo) {
+            disposeCurrentObject();
+            clearAnnotations();
+            setLoading(true, "Calibrating 3D Asset...");
+            gltfLoader.load(modelInfo.file, (gltf) => {
+                currentObject = gltf.scene;
+                currentObject.name = modelInfo.name;
+
+                currentObject.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                if (gltf.animations && gltf.animations.length > 0) {
+                    animationMixer = new THREE.AnimationMixer(currentObject);
+                    animationClips = gltf.animations;
+                    currentAction = animationMixer.clipAction(animationClips[0]);
+                    currentAction.setLoop(THREE.LoopRepeat).play();
+                }
+
+                const box = new THREE.Box3().setFromObject(currentObject);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                currentObject.position.sub(center);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 3.0 / maxDim;
+                currentObject.scale.set(scale, scale, scale);
+                
+                initialModelPosition = currentObject.position.clone();
+                initialModelRotation = currentObject.rotation.clone();
+                initialModelScale = currentObject.scale.clone();
+
+                scene.add(currentObject);
+                setLoading(false);
+            }, undefined, (error) => {
+                console.error('An error happened during GLTF loading:', error);
+                setLoading(false);
+            });
+        }
+        
+        function initThreeScene() {
+            scene = new THREE.Scene();
+            scene.background = originalBackgroundColor;
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('three-container').appendChild(renderer.domElement);
+            
+            loadingManager = new THREE.LoadingManager();
+            gltfLoader = new THREE.GLTFLoader(loadingManager);
+            
+            const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x444444, 1.5);
+            hemisphereLight.position.set(0, 20, 0);
+            scene.add(hemisphereLight);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            keyLight.position.set(5, 5, 5);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 2048; keyLight.shadow.mapSize.height = 2048;
+            scene.add(keyLight);
+            
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            fillLight.position.set(-5, 2, 5);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            rimLight.position.set(0, 3, -10);
+            scene.add(rimLight);
+
+            const leftSideLight = new THREE.PointLight(0xcaeeff, 1.5, 50, 2);
+            leftSideLight.position.set(-10, 4, 3);
+            scene.add(leftSideLight);
+
+            const rightSideLight = new THREE.PointLight(0xffe0bd, 1.5, 50, 2);
+            rightSideLight.position.set(10, 4, 3);
+            scene.add(rightSideLight);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                if (handOverlayCanvas) {
+                    handOverlayCanvas.width = window.innerWidth;
+                    handOverlayCanvas.height = window.innerHeight;
+                }
+            }, false);
+        }
+        
+        async function createHandLandmarker() {
+            setLoading(true, "Initializing Gesture Recognition...");
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+            handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
+                runningMode: "VIDEO", numHands: 2
+            });
+            drawingUtils = new DrawingUtils(handOverlayCtx);
+            handLandmarkerReady = true;
+            setLoading(false);
+        }
+
+        async function initCamera(facingMode = 'user') {
+            stopVideoStream();
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+                    videoElement = document.createElement('video');
+                    videoElement.srcObject = stream;
+                    videoElement.playsInline = true; videoElement.muted = true;
+                    return new Promise((resolve) => {
+                        videoElement.addEventListener('loadeddata', () => {
+                            videoElement.play();
+                            videoTexture = new THREE.VideoTexture(videoElement);
+                            videoTexture.wrapS = THREE.RepeatWrapping;
+                            videoTexture.repeat.x = (facingMode === 'user') ? -1 : 1;
+                            if (isVideoBackground) {
+                                scene.background = videoTexture;
+                            }
+                            resolve();
+                        });
+                    });
+                } catch (err) {
+                    console.error("Error initializing camera:", err);
+                    if (facingMode === 'environment') {
+                        console.log("Falling back to default camera.");
+                        currentFacingMode = 'user';
+                        return initCamera('user');
+                    }
+                }
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            if (animationMixer) animationMixer.update(clock.getDelta());
+            
+            if (isAutoRotating && currentObject && interactionState === 'idle') {
+                currentObject.rotation.y += 0.01;
+            }
+
+            updateAnnotations();
+
+            if (handLandmarkerReady && videoElement?.readyState >= 3 && lastVideoTime !== videoElement.currentTime) {
+                lastVideoTime = videoElement.currentTime;
+                const result = handLandmarker.detectForVideo(videoElement, performance.now());
+                handOverlayCtx.clearRect(0, 0, handOverlayCanvas.width, handOverlayCanvas.height);
+                
+                if (result.landmarks && result.landmarks.length > 0) {
+                    // --- Themed Landmark Colors ---
+                    let landmarkColor = "#FFDBAC", connectorColor = "rgba(255, 219, 172, 0.5)";
+                    if (isSoftLocked) {
+                        landmarkColor = "#ef4444"; connectorColor = "rgba(239, 68, 68, 0.6)";
+                    } else if (isHardLocked) {
+                        landmarkColor = "#6b7280"; connectorColor = "rgba(107, 114, 128, 0.6)";
+                    }
+
+                    if (areHandsVisible || subFabOverlay.classList.contains('visible')) {
+                        handOverlayCtx.save();
+                        if (currentFacingMode === 'user') {
+                            handOverlayCtx.scale(-1, 1);
+                            handOverlayCtx.translate(-handOverlayCanvas.width, 0);
+                        }
+                        for(const landmarks of result.landmarks){
+                            drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, { color: connectorColor, lineWidth: 3 });
+                            drawingUtils.drawLandmarks(landmarks, { color: landmarkColor, radius: 5 });
+                        }
+                        handOverlayCtx.restore();
+                    }
+                    handleHandGestures(result.landmarks);
+                } else {
+                    handleHandGestures(null);
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        // --- UI and State Management ---
+        function updateModeIndicator() {
+            let modeText = '';
+            if (isAnimationMode && isAutoRotating) modeText = 'Animation + Auto-Rotate Mode';
+            else if (isAnimationMode) modeText = 'Animation Mode';
+            else if (isAutoRotating) modeText = 'Auto-Rotate Mode';
+            else modeText = 'Default Mode';
+            modeIndicator.textContent = modeText;
+        }
+        async function switchCamera() {
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            setLoading(true, `Switching to ${currentFacingMode} camera...`);
+            await initCamera(currentFacingMode);
+            setLoading(false);
+        }
+        
+        // --- Gesture Recognition and Handling ---
+        function handleHandGestures(landmarks) {
+            if (isHardLocked) return;
+            if (!landmarks || landmarks.length === 0) {
+                if(highlightedFab) highlightedFab.classList.remove('gesture-highlight');
+                highlightedFab = null;
+                return;
+            };
+            const processedLandmarks = currentFacingMode === 'user' ? landmarks.map(hand => hand.map(lm => ({ x: 1 - lm.x, y: lm.y, z: lm.z }))) : landmarks;
+            const THUMB_TIP = 4, INDEX_FINGER_PIP = 6, INDEX_TIP = 8;
+            const getIsPunch = (hand) => {
+                if (!hand || hand.length === 0) return false;
+                const palmCenterY = (hand[0].y + hand[5].y + hand[17].y) / 3;
+                return [8, 12, 16, 20].every(tipIndex => hand[tipIndex].y > palmCenterY);
+            };
+            const getIsThumbsUp = (hand) => {
+                if (!hand || hand.length === 0) return false;
+                const thumbExtended = hand[4].y < hand[3].y && hand[3].y < hand[2].y;
+                const fingersCurled = hand[8].y > hand[6].y && hand[12].y > hand[10].y;
+                return thumbExtended && fingersCurled;
+            };
+            const isPunch = getIsPunch(processedLandmarks[0]);
+            const isTwoHandThumbsUp = processedLandmarks.length === 2 && getIsThumbsUp(processedLandmarks[0]) && getIsThumbsUp(processedLandmarks[1]);
+            const thumbTipLm = processedLandmarks[0][THUMB_TIP];
+            const indexPipLm = processedLandmarks[0][INDEX_FINGER_PIP];
+            const clickDist = Math.hypot(thumbTipLm.x - indexPipLm.x, thumbTipLm.y - indexPipLm.y);
+            const isClicking = clickDist < 0.04;
+
+            // Animation Mode gesture
+            if (isAnimationMode && !subFabOverlay.classList.contains('visible') && isClicking && !clickDebounce) {
+                if (animationClips.length > 1) {
+                    const nextClipIndex = (animationClips.indexOf(currentAction.getClip()) + 1) % animationClips.length;
+                    const nextAction = animationMixer.clipAction(animationClips[nextClipIndex]);
+                    currentAction.fadeOut(0.5);
+                    nextAction.reset().fadeIn(0.5).play();
+                    currentAction = nextAction;
+                }
+                clickDebounce = true;
+                setTimeout(() => { clickDebounce = false; }, 500);
+                return;
+            }
+
+            if (isTwoHandThumbsUp && isSoftLocked && !specialClickDebounce) {
+                handleFabAction('unlock-soft-lock');
+                specialClickDebounce = true;
+                setTimeout(() => { specialClickDebounce = false; }, 1000);
+            }
+
+            // --- Prioritize modal interactions ---
+            if (isGuideModalVisible) {
+                handleGuideModalGestures(processedLandmarks, isClicking, isPunch);
+                return; 
+            }
+            if (isAnnotationDetailsModalVisible) { // NEW
+                handleAnnotationDetailsModalGestures(processedLandmarks, isClicking, isPunch);
+                return;
+            }
+            
+            if (!isSoftLocked && isPunch && !punchDebounce) {
+                subFabOverlay.classList.toggle('visible');
+                punchDebounce = true;
+                setTimeout(() => { punchDebounce = false; }, 1000);
+            }
+
+            // --- Gesture detection for buttons ---
+            const indexTipLm = processedLandmarks[0][INDEX_TIP];
+            const indexTipCoords = { x: indexTipLm.x * window.innerWidth, y: indexTipLm.y * window.innerHeight };
+            let fabToHighlight = null;
+
+            if (subFabOverlay.classList.contains('visible')) {
+                document.querySelectorAll('#sub-fab-overlay .sub-fab').forEach(fab => {
+                    const rect = fab.getBoundingClientRect();
+                    if (indexTipCoords.x > rect.left && indexTipCoords.x < rect.right && indexTipCoords.y > rect.top && indexTipCoords.y < rect.bottom) {
+                        fabToHighlight = fab;
+                    }
+                });
+            } else if (annotationsVisible) { // NEW: Check for annotation details button
+                 const rect = annotationDetailsButton.getBoundingClientRect();
+                 if (indexTipCoords.x > rect.left && indexTipCoords.x < rect.right && indexTipCoords.y > rect.top && indexTipCoords.y < rect.bottom) {
+                    fabToHighlight = annotationDetailsButton;
+                }
+            }
+
+            if (highlightedFab !== fabToHighlight) {
+                if (highlightedFab) highlightedFab.classList.remove('gesture-highlight');
+                highlightedFab = fabToHighlight;
+                if (highlightedFab) highlightedFab.classList.add('gesture-highlight');
+            }
+            if (isClicking && !clickDebounce && highlightedFab) {
+                highlightedFab.click();
+                clickDebounce = true;
+                setTimeout(() => { clickDebounce = false; }, 500);
+                return; // Return after a button click
+            }
+            
+            if (highlightedFab) { 
+                // Don't interact with model if a button is highlighted but not clicked
+                return;
+            }
+
+            handleModelInteraction(processedLandmarks);
+        }
+
+        // Handles dragging and scaling the guide modal
+        function handleGuideModalGestures(landmarks, isClicking, isPunch) {
+            const w = window.innerWidth, h = window.innerHeight;
+            const THUMB_TIP = 4, INDEX_TIP = 8;
+
+            // --- 1. Close Modal Logic ---
+            if ((isClicking && !clickDebounce) || (isPunch && !punchDebounce)) {
+                handleFabAction('show-guide');
+                if (isClicking) {
+                    clickDebounce = true;
+                    setTimeout(() => { clickDebounce = false; }, 500);
+                }
+                if (isPunch) {
+                    punchDebounce = true;
+                    setTimeout(() => { punchDebounce = false; }, 1000);
+                }
+                return;
+            }
+
+            // --- Pinch Detection Logic (used for both drag and scale) ---
+            const getPinch = (hand) => {
+                if (!hand || hand.length === 0) return { isPinching: false };
+                const pinchDist = Math.hypot(hand[THUMB_TIP].x - hand[INDEX_TIP].x, hand[THUMB_TIP].y - hand[INDEX_TIP].y);
+                const center = { x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2 * w, y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2 * h };
+                return { isPinching: pinchDist < 0.06, center };
+            };
+
+            const pinch1 = getPinch(landmarks[0] || []);
+            const pinch2 = getPinch(landmarks[1] || []);
+
+            // --- 2. Scale Modal Logic (Proportional Zoom) ---
+            if (landmarks.length > 1 && pinch1.isPinching && pinch2.isPinching) {
+                isDraggingGuide = false; // Prioritize scaling over dragging
+                const dist = Math.hypot(pinch1.center.x - pinch2.center.x, pinch1.center.y - pinch2.center.y);
+                
+                if (guideModalScaleInitialPinchDist === null) {
+                    guideModalScaleInitialPinchDist = dist;
+                    guideModalInitialScale = guideModalTransform.scale;
+                } else {
+                    const scaleFactor = dist / guideModalScaleInitialPinchDist;
+                    const newScale = guideModalInitialScale * scaleFactor;
+                    guideModalTransform.scale = Math.max(0.5, Math.min(newScale, 2.5)); 
+                    guideModal.style.transform = `translate(calc(-50% + ${guideModalTransform.x}px), calc(-50% + ${guideModalTransform.y}px)) scale(${guideModalTransform.scale})`;
+                }
+                return;
+            }
+            guideModalScaleInitialPinchDist = null;
+
+            // --- 3. Drag Modal Logic ---
+            if (pinch1.isPinching) {
+                if (!isDraggingGuide) {
+                    isDraggingGuide = true;
+                    const rect = guideModal.getBoundingClientRect();
+                    guideModalDragOffset.x = pinch1.center.x - (rect.left + (rect.width / 2));
+                    guideModalDragOffset.y = pinch1.center.y - (rect.top + (rect.height / 2));
+                }
+                
+                const newCenterX = pinch1.center.x - guideModalDragOffset.x;
+                const newCenterY = pinch1.center.y - guideModalDragOffset.y;
+                
+                guideModalTransform.x = newCenterX - w / 2;
+                guideModalTransform.y = newCenterY - h / 2;
+
+                guideModal.style.transform = `translate(calc(-50% + ${guideModalTransform.x}px), calc(-50% + ${guideModalTransform.y}px)) scale(${guideModalTransform.scale})`;
+            } else {
+                isDraggingGuide = false;
+            }
+        }
+
+        // NEW: Handles dragging and scaling the annotation details modal
+        function handleAnnotationDetailsModalGestures(landmarks, isClicking, isPunch) {
+            const w = window.innerWidth, h = window.innerHeight;
+            const THUMB_TIP = 4, INDEX_TIP = 8;
+            if ((isClicking && !clickDebounce) || (isPunch && !punchDebounce)) {
+                handleFabAction('show-annotation-details');
+                if (isClicking) { clickDebounce = true; setTimeout(() => { clickDebounce = false; }, 500); }
+                if (isPunch) { punchDebounce = true; setTimeout(() => { punchDebounce = false; }, 1000); }
+                return;
+            }
+            const getPinch = (hand) => {
+                if (!hand || hand.length === 0) return { isPinching: false };
+                const pinchDist = Math.hypot(hand[THUMB_TIP].x - hand[INDEX_TIP].x, hand[THUMB_TIP].y - hand[INDEX_TIP].y);
+                const center = { x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2 * w, y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2 * h };
+                return { isPinching: pinchDist < 0.06, center };
+            };
+            const pinch1 = getPinch(landmarks[0] || []);
+            const pinch2 = getPinch(landmarks[1] || []);
+
+            if (landmarks.length > 1 && pinch1.isPinching && pinch2.isPinching) {
+                isDraggingGuide = false; 
+                const dist = Math.hypot(pinch1.center.x - pinch2.center.x, pinch1.center.y - pinch2.center.y);
+                if (guideModalScaleInitialPinchDist === null) {
+                    guideModalScaleInitialPinchDist = dist;
+                    guideModalInitialScale = annotationDetailsModalTransform.scale;
+                } else {
+                    const scaleFactor = dist / guideModalScaleInitialPinchDist;
+                    const newScale = guideModalInitialScale * scaleFactor;
+                    annotationDetailsModalTransform.scale = Math.max(0.5, Math.min(newScale, 2.5)); 
+                    annotationDetailsModal.style.transform = `translate(calc(-50% + ${annotationDetailsModalTransform.x}px), calc(-50% + ${annotationDetailsModalTransform.y}px)) scale(${annotationDetailsModalTransform.scale})`;
+                }
+                return;
+            }
+            guideModalScaleInitialPinchDist = null;
+            if (pinch1.isPinching) {
+                if (!isDraggingGuide) {
+                    isDraggingGuide = true;
+                    const rect = annotationDetailsModal.getBoundingClientRect();
+                    guideModalDragOffset.x = pinch1.center.x - (rect.left + (rect.width / 2));
+                    guideModalDragOffset.y = pinch1.center.y - (rect.top + (rect.height / 2));
+                }
+                const newCenterX = pinch1.center.x - guideModalDragOffset.x;
+                const newCenterY = pinch1.center.y - guideModalDragOffset.y;
+                annotationDetailsModalTransform.x = newCenterX - w / 2;
+                annotationDetailsModalTransform.y = newCenterY - h / 2;
+                annotationDetailsModal.style.transform = `translate(calc(-50% + ${annotationDetailsModalTransform.x}px), calc(-50% + ${annotationDetailsModalTransform.y}px)) scale(${annotationDetailsModalTransform.scale})`;
+            } else {
+                isDraggingGuide = false;
+            }
+        }
+
+
+        // Handles drag, rotate, and scale operations on the 3D model
+        function handleModelInteraction(landmarks) {
+            if (isHardLocked) return;
+            if (!currentObject || !landmarks || landmarks.length === 0) {
+                interactionState = 'idle';
+                return;
+            }
+            
+            const w = window.innerWidth, h = window.innerHeight;
+            const THUMB_TIP = 4, INDEX_TIP = 8, MIDDLE_TIP = 12;
+
+            const getPinch = (hand) => {
+                if (!hand || hand.length === 0) return { isPinching: false };
+                const pinchDist = Math.hypot(hand[THUMB_TIP].x - hand[INDEX_TIP].x, hand[THUMB_TIP].y - hand[INDEX_TIP].y);
+                const center = {x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2 * w, y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2 * h};
+                return { isPinching: pinchDist < 0.06, center };
+            };
+            
+            const hand1 = landmarks[0] || [];
+            const indexTip = hand1[INDEX_TIP];
+            const middleTip = hand1[MIDDLE_TIP];
+            const rotateDist = indexTip && middleTip ? Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y) : 1;
+            const isRotating = rotateDist < 0.04;
+            const pinch1 = getPinch(hand1);
+
+            if (landmarks.length > 1) {
+                const pinch2 = getPinch(landmarks[1] || []);
+                if (pinch1.isPinching && pinch2.isPinching) {
+                    interactionState = 'scaling';
+                    const dist = Math.hypot(pinch1.center.x - pinch2.center.x, pinch1.center.y - pinch2.center.y);
+                    if(scaleInitialPinchDist === null) {
+                        scaleInitialPinchDist = dist;
+                        scaleInitialModelScale = currentObject.scale.clone();
+                    } else {
+                        const scaleFactor = dist / scaleInitialPinchDist;
+                        currentObject.scale.copy(scaleInitialModelScale).multiplyScalar(scaleFactor);
+                    }
+                    return; 
+                }
+            }
+            scaleInitialPinchDist = null; scaleInitialModelScale = null;
+
+            if (isRotating) {
+                const handCenter = {x: indexTip.x * w, y: indexTip.y * h };
+                if (interactionState !== 'rotating') {
+                    interactionState = 'rotating';
+                    rotateLastHandPos.set(handCenter.x, handCenter.y);
+                }
+                const dx = handCenter.x - rotateLastHandPos.x;
+                const dy = handCenter.y - rotateLastHandPos.y;
+                currentObject.rotation.y += dx * 0.01;
+                currentObject.rotation.x += dy * 0.01;
+                rotateLastHandPos.set(handCenter.x, handCenter.y);
+                return;
+            }
+
+            if (pinch1.isPinching) {
+                if (interactionState !== 'dragging') {
+                    interactionState = 'dragging';
+                    const vec = new THREE.Vector3((pinch1.center.x / w) * 2 - 1, -(pinch1.center.y / h) * 2 + 1, 0.5).unproject(camera);
+                    const dir = vec.sub(camera.position).normalize();
+                    const distance = -camera.position.z / dir.z;
+                    const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+                    dragOffset.copy(currentObject.position).sub(pos);
+                }
+                const vec = new THREE.Vector3((pinch1.center.x / w) * 2 - 1, -(pinch1.center.y / h) * 2 + 1, 0.5).unproject(camera);
+                const dir = vec.sub(camera.position).normalize();
+                const distance = -camera.position.z / dir.z;
+                const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+                currentObject.position.copy(pos.add(dragOffset));
+                return;
+            }
+
+            interactionState = 'idle';
+        }
+        
+        // --- Annotation Logic ---
+        function clearAnnotations() { 
+            annotationContainer.innerHTML = ''; 
+            annotations = []; 
+            annotationsVisible = false; 
+            // NEW: Hide button and modal
+            annotationDetailsButtonContainer.classList.add('hidden');
+            annotationDetailsModal.classList.remove('visible');
+            isAnnotationDetailsModalVisible = false;
+        }
+        function createAnnotations() {
+            clearAnnotations(); if (!currentObject) return;
+            const annotationDetails = [
+                {
+                    title: "Ion Engine Core",
+                    description: "Primary propulsion unit utilizing advanced ion thrusters. Generates silent, efficient thrust for long-duration missions. Power output is currently at 85% capacity. Plasma temperature is stable at 4.5 million Kelvin. This is a critical system."
+                },
+                {
+                    title: "Articulated Joint",
+                    description: "A primary servo-actuated joint. Allows for 270 degrees of rotation on the primary axis and 180 on the secondary. Composed of a titanium-graphite composite. Last maintenance cycle was two weeks ago, showing minimal wear."
+                },
+                {
+                    title: "Cryo-Cell Battery",
+                    description: "Main power storage holding a cryogenic charge. Provides up to 72 hours of continuous operation under standard load. Current charge level: 92.3%. Features a self-regulating thermal vent system."
+                },
+                {
+                    title: "Plasma Exhaust Port",
+                    description: "Vents superheated plasma from the core reactor. The magnetic containment field is operating within all nominal parameters. It is crucial to keep this area clear of any and all debris to ensure efficient operation."
+                },
+                {
+                    title: "Multi-Spectrum Sensor",
+                    description: "Advanced sensor array detecting electromagnetic signatures. Scans across infrared, ultraviolet, and gamma rays. Data is processed in real-time by the onboard AI. Optimal detection range is 500 kilometers."
+                },
+                {
+                    title: "Ablative Armor Plating",
+                    description: "Composed of a unique ceramic-metallic alloy. This plating is designed to ablate upon impact, dissipating massive amounts of energy. Structural integrity is holding at 99.8%. Minor micrometeoroid pitting detected on the outer layers."
+                },
+                {
+                    title: "Hydraulic Actuator",
+                    description: "Controls fine motor movements for limbs and manipulators. Operates at a standard pressure of 3000 PSI. Fluid levels are nominal and the system is triple-redundant for safety."
+                },
+                {
+                    title: "Primary Optical Lens",
+                    description: "The main visual input for navigation and targeting. Features a 200x optical zoom and a variable aperture. The lens is protected by a sapphire crystal cover to resist impacts."
+                }
+            ];
+
+            let mesh = null; currentObject.traverse(child => { if (child.isMesh && !mesh) mesh = child; });
+            if (!mesh || !mesh.geometry.attributes.position) return;
+            
+            const vertexCount = mesh.geometry.attributes.position.count;
+            
+            const shuffledDetails = [...annotationDetails].sort(() => 0.5 - Math.random());
+
+            const detailsList = document.getElementById('annotation-details-list');
+            detailsList.innerHTML = ''; // Clear previous details
+
+            const offsets = [
+                { side: 'left', distance: 70 },
+                { side: 'right', distance: 70 },
+                { side: 'left', distance: 130 },
+                { side: 'right', distance: 130 },
+                { side: 'left', distance: 190 }
+            ];
+
+            // --- NEW: Select well-separated points ---
+            const selectedPoints = [];
+            if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+            const modelSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+            const minDistance = Math.max(modelSize.x, modelSize.y, modelSize.z) * 0.25; // 25% of largest dimension
+            const maxTries = 1000;
+            let tries = 0;
+
+            while (selectedPoints.length < 5 && tries < maxTries) {
+                tries++;
+                const randomIndex = Math.floor(Math.random() * vertexCount);
+                const candidatePoint = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex);
+
+                let isFarEnough = true;
+                for (const point of selectedPoints) {
+                    if (candidatePoint.distanceTo(point) < minDistance) {
+                        isFarEnough = false;
+                        break;
+                    }
+                }
+
+                if (isFarEnough) {
+                    selectedPoints.push(candidatePoint);
+                }
+            }
+            
+            // Fallback: If the algorithm fails, fill the rest with purely random points
+            while (selectedPoints.length < 5) {
+                const randomIndex = Math.floor(Math.random() * vertexCount);
+                selectedPoints.push(new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex));
+            }
+
+
+            selectedPoints.forEach((localPos, i) => {
+                const annotationElement = document.createElement('div');
+                annotationElement.className = 'annotation';
+                
+                const detail = shuffledDetails[i % shuffledDetails.length];
+                const sentences = detail.description.split('. ');
+                const sentenceCount = Math.floor(Math.random() * (sentences.length - 2)) + 2;
+                const randomLengthDescription = sentences.slice(0, sentenceCount).join('. ');
+                // MODIFIED: Only show the title in the annotation window
+                const annotationHTML = `<strong class="annotation-title">${detail.title}</strong>`;
+                // NEW: Populate the details modal list
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong>${detail.title}:</strong><span>${randomLengthDescription}</span>`;
+                detailsList.appendChild(listItem);
+
+                const config = offsets[i];
+                const onLeftSide = config.side === 'left';
+                const distance = config.distance;
+                let svgHTML, windowTransform;
+                const svgWidth = distance + 50; 
+
+                if (onLeftSide) {
+                    windowTransform = `transform: translate(calc(-100% - ${distance}px), -50%);`;
+                    const dotX = svgWidth - 10;
+                    const lineEndX = dotX - (distance - 15);
+                    svgHTML = `
+                        <svg height="100" width="${svgWidth}" style="position: absolute; transform: translate(-${svgWidth - 10}px, -50%);">
+                            <circle class="annotation-dot" cx="${dotX}" cy="50" r="4"/>
+                            <line class="annotation-line" x1="${dotX}" y1="50" x2="${lineEndX}" y2="50" />
+                        </svg>`;
+                } else {
+                    windowTransform = `transform: translate(${distance}px, -50%);`;
+                    const dotX = 10;
+                    const lineEndX = dotX + (distance - 15);
+                    svgHTML = `
+                        <svg height="100" width="${svgWidth}" style="position: absolute; transform: translate(-10px, -50%);">
+                            <circle class="annotation-dot" cx="${dotX}" cy="50" r="4"/>
+                            <line class="annotation-line" x1="${dotX}" y1="50" x2="${lineEndX}" y2="50" />
+                        </svg>`;
+                }
+
+                annotationElement.innerHTML = `${svgHTML}<div class="annotation-window" style="${windowTransform}">${annotationHTML}</div>`;
+                annotationContainer.appendChild(annotationElement);
+                annotations.push({ element: annotationElement, anchorPointLocal: localPos });
+            });
+            annotationsVisible = true;
+            // NEW: Show the details button
+            annotationDetailsButtonContainer.classList.remove('hidden');
+        }
+        function updateAnnotations() {
+            if (!currentObject || annotations.length === 0) return;
+            if (!annotationsVisible) { for (const ann of annotations) ann.element.classList.remove('visible'); return; }
+            currentObject.updateMatrixWorld();
+            for (const ann of annotations) {
+                const worldPos = ann.anchorPointLocal.clone().applyMatrix4(currentObject.matrixWorld);
+                const screenVector = worldPos.clone().project(camera);
+                if (screenVector.z > 1) { ann.element.classList.remove('visible'); continue; }
+                else { ann.element.classList.add('visible'); }
+                const x = (screenVector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-screenVector.y * 0.5 + 0.5) * window.innerHeight;
+                ann.element.style.left = `${x}px`; ann.element.style.top = `${y}px`;
+            }
+        }
+        
+        // --- UI Event Handlers and Actions ---
+        function toggleCameraBackground() {
+            if (!videoTexture) return;
+            isVideoBackground = !isVideoBackground;
+            scene.background = isVideoBackground ? videoTexture : originalBackgroundColor;
+        }
+        function handleFabAction(action) {
+            const mainFab = document.getElementById('main-fab');
+            switch(action) {
+                case 'reset-scene': 
+                    clearAnnotations(); isAnimationMode = false; isAutoRotating = false; updateModeIndicator();
+                    if (currentObject) {
+                        if (initialModelPosition) currentObject.position.copy(initialModelPosition);
+                        if (initialModelRotation) currentObject.rotation.copy(initialModelRotation);
+                        if (initialModelScale) currentObject.scale.copy(initialModelScale);
+
+                        if (animationMixer && animationClips.length > 0) {
+                            const firstAction = animationMixer.clipAction(animationClips[0]);
+                            if (currentAction && currentAction !== firstAction) {
+                                currentAction.fadeOut(0.5);
+                                firstAction.reset().fadeIn(0.5).play();
+                            } else {
+                                firstAction.reset().play();
+                            }
+                            currentAction = firstAction;
+                        }
+                    }
+                    break;
+                case 'play-animation': isAnimationMode = !isAnimationMode; updateModeIndicator(); break;
+                case 'toggle-camera': toggleCameraBackground(); break;
+                case 'add-annotations':
+                    if (annotations.length === 0) {
+                        createAnnotations();
+                    } else {
+                        annotationsVisible = !annotationsVisible;
+                        // NEW: Toggle button visibility with annotations
+                        annotationDetailsButtonContainer.classList.toggle('hidden', !annotationsVisible);
+                        // NEW: If hiding annotations, also hide details modal
+                        if (!annotationsVisible && isAnnotationDetailsModalVisible) {
+                            handleFabAction('show-annotation-details');
+                        }
+                    }
+                    break;
+                case 'show-guide':
+                    isGuideModalVisible = !isGuideModalVisible;
+                    guideModal.classList.toggle('visible', isGuideModalVisible);
+                    if (isGuideModalVisible) {
+                        guideModalTransform = { x: 0, y: 0, scale: 1 };
+                        guideModal.style.transform = `translate(-50%, -50%) scale(1)`;
+                    }
+                    break;
+                // NEW
+                case 'show-annotation-details':
+                    isAnnotationDetailsModalVisible = !isAnnotationDetailsModalVisible;
+                    annotationDetailsModal.classList.toggle('visible', isAnnotationDetailsModalVisible);
+                    if (isAnnotationDetailsModalVisible) {
+                        annotationDetailsModalTransform = { x: 0, y: 0, scale: 1 };
+                        annotationDetailsModal.style.transform = `translate(-50%, -50%) scale(1)`;
+                    }
+                    break;
+                case 'soft-lock-menu':
+                    isSoftLocked = !isSoftLocked;
+                    if (isSoftLocked) {
+                        isHardLocked = false; mainFab.classList.add('soft-locked'); mainFab.classList.remove('hard-locked'); subFabOverlay.classList.remove('visible');
+                    } else { mainFab.classList.remove('soft-locked'); }
+                    updateLockIcons(); break;
+                case 'unlock-soft-lock':
+                    if (isSoftLocked) { isSoftLocked = false; mainFab.classList.remove('soft-locked'); updateLockIcons(); }
+                    break;
+                case 'hard-lock-all':
+                    isHardLocked = !isHardLocked;
+                    if (isHardLocked) {
+                        if (isSoftLocked) { isSoftLocked = false; mainFab.classList.remove('soft-locked'); }
+                        mainFab.classList.add('hard-locked'); subFabOverlay.classList.remove('visible');
+                    } else { mainFab.classList.remove('hard-locked'); }
+                    updateLockIcons(); break;
+                case 'toggle-autorotate': isAutoRotating = !isAutoRotating; updateModeIndicator(); break;
+                case 'upload-model': modelInput.click(); break;
+                case 'switch-camera': switchCamera(); break;
+                case 'user-panel': window.location.href = 'UserDashboard.html'; break;
+                case 'toggle-hands':
+                    areHandsVisible = !areHandsVisible;
+                    document.getElementById('sub-12').classList.toggle('hands-toggled-off', !areHandsVisible);
+                    break;
+            }
+        }
+        function updateLockIcons() {
+            const isAnyLockActive = isSoftLocked || isHardLocked;
+            document.getElementById('fab-icon-locked').classList.toggle('hidden', !isAnyLockActive);
+            document.getElementById('fab-icon-unlocked').classList.toggle('hidden', isAnyLockActive);
+        }
+        
+        window.onload = async () => {
+            loadingOverlay = document.getElementById('loading-overlay');
+            handOverlayCanvas = document.getElementById('hand-overlay');
+            handOverlayCtx = handOverlayCanvas.getContext('2d');
+            subFabOverlay = document.getElementById('sub-fab-overlay');
+            guideModal = document.getElementById('guide-modal');
+            modelInput = document.getElementById('model-input');
+            modeIndicator = document.getElementById('mode-indicator');
+            annotationContainer = document.getElementById('annotation-container');
+            // NEW
+            annotationDetailsButtonContainer = document.getElementById('annotation-details-button-container');
+            annotationDetailsButton = document.getElementById('annotation-details-button');
+            annotationDetailsModal = document.getElementById('annotation-details-modal');
+
+            handOverlayCanvas.width = window.innerWidth; handOverlayCanvas.height = window.innerHeight;
+
+            // --- Starry Background Logic ---
+            const starsContainer = document.getElementById('stars');
+            const createStars = () => {
+                const starCount = 150;
+                for (let i = 0; i < starCount; i++) {
+                    const star = document.createElement('div');
+                    star.classList.add('star');
+                    const size = Math.random() * 3 + 1;
+                    star.style.width = `${size}px`; star.style.height = `${size}px`;
+                    star.style.top = `${Math.random() * 100}%`; star.style.left = `${Math.random() * 100}%`;
+                    const duration = Math.random() * 2 + 3; const delay = Math.random() * 3;
+                    star.style.animationDuration = `${duration}s`; star.style.animationDelay = `${delay}s`;
+                    starsContainer.appendChild(star);
+                }
+            };
+            createStars();
+            
+            initThreeScene();
+
+            document.getElementById('main-fab').addEventListener('click', () => {
+                if (isHardLocked) handleFabAction('hard-lock-all');
+                else if (isSoftLocked) handleFabAction('soft-lock-menu');
+                else subFabOverlay.classList.toggle('visible');
+            });
+            document.querySelectorAll('.sub-fab').forEach(fab => {
+                fab.addEventListener('click', () => {
+                    handleFabAction(fab.dataset.action);
+                    const nonClosingActions = ['soft-lock-menu', 'hard-lock-all', 'toggle-hands'];
+                    if (!nonClosingActions.includes(fab.dataset.action)) {
+                       subFabOverlay.classList.remove('visible');
+                    }
+                });
+            });
+            // NEW: Add click listener for the details button
+            annotationDetailsButton.addEventListener('click', () => {
+                handleFabAction('show-annotation-details');
+            });
+            modelInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    loadModel({ name: file.name, file: url });
+                }
+            });
+            
+            await initCamera(currentFacingMode); 
+            await createHandLandmarker();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const modelUrl = urlParams.get('modelUrl');
+            const modelName = urlParams.get('modelName');
+
+            if (modelUrl) {
+                loadModel({ name: decodeURIComponent(modelName) || 'Uploaded Model', file: decodeURIComponent(modelUrl) });
+            } else {
+                // Fallback to default model
+                loadModel({ name: 'RobotExpressive', file: 'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb' });
+            }
+            
+            animate();
+        }
+    </script>
+</body>
+</html>

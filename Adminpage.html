@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 25%, #2d1b4e 50%, #1a0a2e 75%, #0a0a1f 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .stars {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle ease-in-out infinite;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.2;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+            animation: floatOrb 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #9333ea, transparent);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #ec4899, transparent);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #3b82f6, transparent);
+            top: 50%;
+            left: 50%;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatOrb {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            33% {
+                transform: translate(100px, -100px) rotate(120deg);
+            }
+
+            66% {
+                transform: translate(-100px, 100px) rotate(240deg);
+            }
+        }
+
+        .auth-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .auth-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 60px -12px rgba(147, 51, 234, 0.4), 0 0 0 1px rgba(147, 51, 234, 0.3);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 28rem;
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .icon-badge {
+            display: inline-block;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border-radius: 50%;
+            margin-bottom: 1.5rem;
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+        }
+
+        .icon-badge svg {
+            width: 44px;
+            height: 44px;
+            color: white;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.75rem;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .error-banner {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 0.75rem;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
+        }
+
+        .error-text {
+            color: #fca5a5;
+            font-size: 0.875rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #d1d5db;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(55, 65, 81, 0.6);
+            border: 1.5px solid rgba(75, 85, 99, 0.5);
+            border-radius: 0.75rem;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input[type="password"] {
+            padding-right: 3rem;
+        }
+
+        input::placeholder {
+            color: #6b7280;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #9333ea;
+            background: rgba(55, 65, 81, 0.8);
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        input.error {
+            border-color: #ef4444;
+            animation: shake 0.5s ease;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: all 0.3s;
+        }
+
+        .toggle-password:hover {
+            color: #c084fc;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .toggle-password svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .error-message {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #fca5a5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .password-requirements {
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: rgba(31, 41, 55, 0.5);
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+        }
+
+        .requirements-title {
+            color: #c084fc;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .requirement {
+            color: #6b7280;
+            transition: all 0.3s ease;
+        }
+
+        .requirement.met {
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #9333ea;
+        }
+
+        .remember-me label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #a855f7, #f472b6);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+
+        .btn-primary span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px -5px rgba(147, 51, 234, 0.7);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .toggle-auth {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .toggle-auth button {
+            background: none;
+            border: none;
+            color: #c084fc;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0.5rem;
+        }
+
+        .toggle-auth button:hover {
+            color: #d8b4fe;
+            text-decoration: underline;
+        }
+
+        .dashboard {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 16rem;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(147, 51, 234, 0.5);
+            transition: all 0.3s;
+            overflow: hidden;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar.closed {
+            width: 0;
+        }
+
+        .sidebar-content {
+            padding: 1.5rem;
+            width: 16rem;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-icon {
+            padding: 0.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+        }
+
+        .sidebar-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .sidebar-title-text h3 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .sidebar-title-text p {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 0.75rem;
+            color: #d1d5db;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, #9333ea, #ec4899);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-item:hover {
+            background: rgba(55, 65, 81, 0.5);
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(236, 72, 153, 0.3));
+            color: white;
+            border: 1px solid rgba(147, 51, 234, 0.5);
+        }
+
+        .nav-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .nav-parent {
+            position: relative;
+        }
+
+        .nav-arrow {
+            width: 16px;
+            height: 16px;
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-parent.expanded .nav-arrow {
+            transform: rotate(180deg);
+        }
+
+        .nav-submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            margin-left: 1rem;
+        }
+
+        .nav-submenu.expanded {
+            max-height: 300px;
+        }
+
+        .nav-subitem {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 0.5rem;
+            color: #9ca3af;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            position: relative;
+        }
+
+        .nav-subitem::before {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            top: 50%;
+            width: 6px;
+            height: 6px;
+            background: #6b7280;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            transition: all 0.3s;
+        }
+
+        .nav-subitem:hover {
+            color: #d1d5db;
+            background: rgba(55, 65, 81, 0.3);
+        }
+
+        .nav-subitem:hover::before {
+            background: #a855f7;
+            transform: translateY(-50%) scale(1.5);
+        }
+
+        .nav-subitem.active {
+            color: white;
+            background: rgba(147, 51, 234, 0.2);
+            border-left: 2px solid #a855f7;
+        }
+
+        .nav-subitem.active::before {
+            background: #a855f7;
+            transform: translateY(-50%) scale(1.5);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(147, 51, 234, 0.5);
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .menu-btn {
+            padding: 0.5rem;
+            background: rgba(55, 65, 81, 0.5);
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .menu-btn:hover {
+            background: rgba(147, 51, 234, 0.3);
+            transform: scale(1.05);
+        }
+
+        .menu-btn svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #fff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .viewer-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.5rem;
+            background: rgba(55, 65, 81, 0.6);
+            color: white;
+            border: 1.5px solid rgba(147, 51, 234, 0.4);
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewer-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(236, 72, 153, 0.3));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .viewer-btn:hover::before {
+            opacity: 1;
+        }
+
+        .viewer-btn:hover {
+            border-color: #9333ea;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(147, 51, 234, 0.4);
+        }
+
+        .viewer-btn svg {
+            width: 18px;
+            height: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .viewer-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.5rem;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+        }
+
+        .logout-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .main-window {
+            flex: 1;
+            padding: 1.5rem;
+            overflow: auto;
+        }
+
+        .content-card {
+            background: rgba(17, 24, 39, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            padding: 2rem;
+            min-height: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .content-center {
+            text-align: center;
+            padding: 5rem 0;
+        }
+
+        .content-icon {
+            display: inline-block;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border-radius: 50%;
+            margin-bottom: 1.5rem;
+            animation: float 3s ease-in-out infinite;
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.5);
+        }
+
+        .content-icon svg {
+            width: 48px;
+            height: 48px;
+            color: white;
+        }
+
+        .content-title {
+            font-size: 1.875rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #fff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .content-description {
+            color: #9ca3af;
+            font-size: 1.125rem;
+        }
+
+        .experiences-section {
+            padding: 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2.5rem;
+            text-align: center;
+            background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .experiences-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .experience-card {
+            position: relative;
+            background: rgba(17, 24, 39, 0.6);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1.5px solid rgba(147, 51, 234, 0.3);
+            height: 350px;
+        }
+
+        .experience-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: rgba(147, 51, 234, 0.6);
+            box-shadow: 0 25px 60px rgba(147, 51, 234, 0.5);
+        }
+
+        .experience-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: all 0.5s ease;
+        }
+
+        .experience-card:hover .experience-image {
+            transform: scale(1.15);
+        }
+
+        .experience-info {
+            padding: 1.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .experience-info h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .experience-info p {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .experience-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(10, 10, 31, 0.95), transparent);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 2.5rem;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .experience-card:hover .experience-overlay {
+            opacity: 1;
+        }
+
+        .visit-button {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border: none;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4);
+        }
+
+        .visit-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(147, 51, 234, 0.6);
+        }
+
+        .visit-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .model-viewer-container {
+            min-height: 100vh;
+            padding-top: 0;
+        }
+
+        .home-section {
+            text-align: center;
+            padding: 6rem 2rem;
+        }
+
+        .home-icon {
+            display: inline-block;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6);
+            border-radius: 50%;
+            margin-bottom: 2.5rem;
+            animation: float 4s ease-in-out infinite;
+            box-shadow: 0 20px 60px rgba(168, 85, 247, 0.6);
+            position: relative;
+        }
+
+        .home-icon::before {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6);
+            opacity: 0.3;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .home-icon svg {
+            width: 72px;
+            height: 72px;
+            color: white;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+        }
+
+        .home-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .home-tagline {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2.5rem;
+            font-weight: 600;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .home-description {
+            font-size: 1.2rem;
+            color: #d1d5db;
+            max-width: 850px;
+            margin: 0 auto;
+            line-height: 1.9;
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            text-align: left;
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 60px rgba(147, 51, 234, 0.4);
+            position: relative;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(55, 65, 81, 0.5);
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: all 0.3s;
+            border-radius: 0.5rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(220, 38, 38, 0.3);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .modal-close svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.7rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-image-container {
+            margin-bottom: 1.5rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+        }
+
+        .modal-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .modal-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 1rem;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .stat-value.active {
+            color: #10b981;
+        }
+
+        .stat-value.beta {
+            color: #f59e0b;
+        }
+
+        .stat-value.date {
+            color: #c084fc;
+        }
+
+        .stat-value.views {
+            color: #818cf8;
+        }
+
+        .stat-value.rating {
+            color: #f59e0b;
+        }
+
+        .modal-description {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(147, 51, 234, 0.2);
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-description-title {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-description-text {
+            color: #d1d5db;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .modal-button {
+            flex: 1;
+            padding: 1rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border: none;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .modal-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(147, 51, 234, 0.6);
+        }
+
+        .modal-button.secondary {
+            background: rgba(55, 65, 81, 0.8);
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            box-shadow: none;
+        }
+
+        .modal-button.secondary:hover {
+            background: rgba(75, 85, 99, 0.8);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .header-title {
+                font-size: 1.25rem;
+            }
+
+            .experiences-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+            }
+
+            .home-title {
+                font-size: 2.5rem;
+            }
+
+            .home-tagline {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="stars" id="starsContainer"></div>
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+
+        <div id="authScreen" class="auth-container">
+            <div class="auth-panel">
+                <div class="auth-header">
+                    <div class="icon-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <h2 id="authTitle">Welcome Back</h2>
+                    <p class="subtitle" id="authSubtitle">Sign in to your dashboard</p>
+                    <div id="loginError" class="error-banner hidden">
+                        <p class="error-text"></p>
+                    </div>
+                </div>
+                <form id="authForm">
+                    <div id="usernameGroup" class="form-group hidden">
+                        <label>Username</label>
+                        <input type="text" id="username" placeholder="Enter username">
+                        <p class="error-message hidden" id="usernameError"></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="Enter email">
+                        <p class="error-message hidden" id="emailError"></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" placeholder="Enter password">
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="error-message hidden" id="passwordError"></p>
+                        <div id="passwordRequirements" class="password-requirements hidden">
+                            <p class="requirements-title">Password must contain:</p>
+                            <div class="requirements-grid">
+                                <span class="requirement" id="req-length">✓ 8+ characters</span>
+                                <span class="requirement" id="req-upper">✓ Uppercase letter</span>
+                                <span class="requirement" id="req-lower">✓ Lowercase letter</span>
+                                <span class="requirement" id="req-number">✓ Number</span>
+                                <span class="requirement" id="req-special">✓ Special character</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="confirmPasswordGroup" class="form-group hidden">
+                        <label>Confirm Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirmPassword" placeholder="Confirm password">
+                            <button type="button" class="toggle-password" id="toggleConfirmPassword">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="error-message hidden" id="confirmPasswordError"></p>
+                    </div>
+                    <div id="rememberMeGroup" class="remember-me">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe">Remember me</label>
+                    </div>
+                    <button type="submit" class="btn-primary" id="authButton"><span>Login</span></button>
+                </form>
+                <div class="toggle-auth">
+                    <button type="button" id="toggleAuthMode">Don't have an account? Register</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardScreen" class="dashboard hidden">
+            <aside id="sidebar" class="sidebar">
+                <div class="sidebar-content">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title">
+                            <div class="sidebar-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="sidebar-title-text">
+                                <h3>Admin Panel</h3>
+                                <p>Dashboard</p>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="nav-menu">
+                        <button class="nav-item active" data-section="upload"><svg xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg><span>Upload Data</span></button>
+                        <button class="nav-item" data-section="modify"><svg xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg><span>Modify Data</span></button>
+                        <button class="nav-item" data-section="stream"><svg xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg><span>Stream</span></button>
+                        <button class="nav-item" data-section="users"><svg xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg><span>Manage Users</span></button>
+                        <button class="nav-item" data-section="ar-modes"><svg xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg><span>AR Modes</span></button>
+                        <button class="nav-item nav-parent" data-section="model-viewer"><svg
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg><span>Upload Model</span><svg class="nav-arrow" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg></button>
+                        <div class="nav-submenu" id="modelViewerSubmenu">
+                            <button class="nav-subitem" data-section="model-viewer-home"><span>Home</span></button>
+                            <button class="nav-subitem" data-section="model-viewer-upload"><span>Upload
+                                    Model</span></button>
+                            <button class="nav-subitem" data-section="model-viewer-about"><span>About</span></button>
+                        </div>
+                    </nav>
+                </div>
+            </aside>
+            <div class="main-content">
+                <header class="header">
+                    <div class="header-content">
+                        <div class="header-left">
+                            <button class="menu-btn" id="menuToggle">
+                                <svg id="menuIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <h1 class="header-title" id="headerTitle">Upload Data</h1>
+                        </div>
+                        <div class="header-right">
+                            <button class="viewer-btn" id="viewerBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                                <span>Upload Model</span>
+                            </button>
+                            <button class="logout-btn" id="logoutBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+                <main class="main-window">
+                    <div class="content-card" id="mainContent"></div>
+                </main>
+            </div>
+        </div>
+
+        <div class="modal" id="infoModal">
+            <div class="modal-content">
+                <button class="modal-close" id="closeModalBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <h3 class="modal-title" id="modalTitle">Project Details</h3>
+                <div class="modal-image-container">
+                    <img id="modalImage" class="modal-image" src="" alt="Project">
+                </div>
+                <div class="modal-stats">
+                    <div class="stat-item">
+                        <p class="stat-label">Status</p>
+                        <p class="stat-value active" id="modalStatus">Active</p>
+                    </div>
+                    <div class="stat-item">
+                        <p class="stat-label">Created</p>
+                        <p class="stat-value date" id="modalDate">2024-01-15</p>
+                    </div>
+                    <div class="stat-item">
+                        <p class="stat-label">Views</p>
+                        <p class="stat-value views" id="modalViews">1,234</p>
+                    </div>
+                    <div class="stat-item">
+                        <p class="stat-label">Rating</p>
+                        <p class="stat-value rating" id="modalRating">4.8 ⭐</p>
+                    </div>
+                </div>
+                <div class="modal-description">
+                    <p class="modal-description-title">Description</p>
+                    <p class="modal-description-text" id="modalDescription">Loading...</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button" id="launchButton">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            style="width:18px;height:18px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Launch Experience
+                    </button>
+                    <button class="modal-button secondary">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            isLoggedIn: false,
+            showRegister: false,
+            sidebarOpen: true,
+            activeSection: 'upload',
+            registeredUsers: [
+                {
+                    username: 'Raju',
+                    email: 'admin@gmail.com',
+                    password: 'Admin@123'
+                }
+            ],
+            rememberedEmail: '',
+            modelImageState: { previewImages: [] }
+        };
+
+        const arExperiences = [
+            {
+                title: 'Product Showcase',
+                desc: 'Interactive 3D product viewer with real-time rotation and zoom capabilities. Perfect for e-commerce and product demonstrations.',
+                img: 'https://www.reydar.com/wp-content/uploads/2020/01/Product_Solutions_leica-1-1422x801.jpg',
+                status: 'Active',
+                date: '2024-01-15',
+                views: '2,847',
+                rating: '4.9 ⭐',
+                fullDesc: 'An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models. Users can explore every detail of the product in augmented reality, rotate, zoom, and see technical specifications in real-time.'
+            },
+            {
+                title: 'VR Immersion',
+                desc: 'Metaverse experience design featuring immersive virtual reality environments. Explore digital worlds with complete 360-degree interaction.',
+                img: 'https://images.adsttc.com/media/images/64ab/cf16/5921/1867/15c1/1091/medium_jpg/personal-metaverse-immersion-devices-unlocking-the-potential-of-ar-and-vr_9.jpg?1688981317',
+                status: 'Beta',
+                date: '2024-02-20',
+                views: '1,523',
+                rating: '4.7 ⭐',
+                fullDesc: 'Next-generation metaverse experience featuring full VR immersion with haptic feedback support. Enter virtual worlds with unprecedented realism and interact with digital environments like never before.'
+            },
+            {
+                title: 'Architecture Demo',
+                desc: '3D building visualization with walkthrough capabilities. Experience architectural designs before construction begins.',
+                img: 'https://amazingarchitecture.com/storage/files/1/softwares/arki/arki_app_architceture_software-5.jpg',
+                status: 'Active',
+                date: '2023-12-10',
+                views: '3,891',
+                rating: '4.8 ⭐',
+                fullDesc: 'Revolutionary architectural visualization tool allowing clients to walk through buildings before construction. Features real-time lighting, material changes, and spatial planning capabilities in augmented reality.'
+            },
+            {
+                title: 'AR Mini Game',
+                desc: 'Interactive gaming experience combining augmented reality with gameplay mechanics. Engage with virtual elements in your real environment.',
+                img: 'https://assetstorev1-prd-cdn.unity3d.com/package-screenshot/e2bfb0d9-b6fb-47e5-90d2-d0c35d43f030_scaled.jpg',
+                status: 'Active',
+                date: '2024-03-05',
+                views: '5,234',
+                rating: '4.9 ⭐',
+                fullDesc: 'Engaging AR gaming experience that blends virtual characters with real-world environments. Features multiplayer support, location-based gameplay, and dynamic difficulty adjustment for maximum fun.'
+            }
+        ];
+
+        const menuItems = {
+            upload: { label: 'Upload Data', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+            modify: { label: 'Modify Data', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+            stream: { label: 'Stream', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+            users: { label: 'Manage Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+            'ar-modes': { label: 'AR Modes', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+            'model-viewer-home': { label: '3D Model Viewer - Home', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+            'model-viewer-upload': { label: '3D Model Viewer - Upload', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+            'model-viewer-about': { label: '3D Model Viewer - About', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
+        };
+
+        function generateStars() {
+            const c = document.getElementById('starsContainer');
+            for (let i = 0; i < 200; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                const sz = Math.random() * 3 + 1;
+                s.style.width = sz + 'px';
+                s.style.height = sz + 'px';
+                s.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                s.style.animationDelay = (Math.random() * 2) + 's';
+                c.appendChild(s);
+            }
+        }
+
+        function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+        function validatePassword(p) {
+            return {
+                isValid: p.length >= 8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p) && /[!@#$%^&*(),.?":{}|<>]/.test(p),
+                minLength: p.length >= 8,
+                hasUpperCase: /[A-Z]/.test(p),
+                hasLowerCase: /[a-z]/.test(p),
+                hasNumber: /\d/.test(p),
+                hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(p)
+            };
+        }
+
+        function updatePasswordRequirements() {
+            const p = document.getElementById('password').value;
+            const v = validatePassword(p);
+            document.getElementById('req-length').classList.toggle('met', v.minLength);
+            document.getElementById('req-upper').classList.toggle('met', v.hasUpperCase);
+            document.getElementById('req-lower').classList.toggle('met', v.hasLowerCase);
+            document.getElementById('req-number').classList.toggle('met', v.hasNumber);
+            document.getElementById('req-special').classList.toggle('met', v.hasSpecialChar);
+        }
+
+        function clearError(f) {
+            if (f === 'login') {
+                document.getElementById('loginError').classList.add('hidden');
+                return;
+            }
+            const el = document.getElementById(f);
+            if (el) el.classList.remove('error');
+            const err = document.getElementById(f + 'Error');
+            if (err) err.classList.add('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        function showError(f, m) {
+            if (f === 'login') {
+                const d = document.getElementById('loginError');
+                d.querySelector('.error-text').textContent = m;
+                d.classList.remove('hidden');
+            } else {
+                const el = document.getElementById(f);
+                if (el) el.classList.add('error');
+                const err = document.getElementById(f + 'Error');
+                if (err) {
+                    err.textContent = m;
+                    err.classList.remove('hidden');
+                }
+            }
+        }
+
+        function saveRememberedUser(e) { state.rememberedEmail = e; }
+
+        function loadRememberedUser() {
+            if (state.rememberedEmail) {
+                document.getElementById('email').value = state.rememberedEmail;
+                document.getElementById('rememberMe').checked = true;
+            }
+        }
+
+        function handleLogin() {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            const r = document.getElementById('rememberMe').checked;
+            let h = false;
+
+            clearError('email');
+            clearError('password');
+            clearError('login');
+
+            if (!e) {
+                showError('email', 'Email is required');
+                h = true;
+            } else if (!validateEmail(e)) {
+                showError('email', 'Please enter a valid email address');
+                h = true;
+            }
+
+            if (!p) {
+                showError('password', 'Password is required');
+                h = true;
+            }
+
+            if (e && p) {
+                const u = state.registeredUsers.find(usr => usr.email === e && usr.password === p);
+                if (!u) {
+                    showError('login', 'Invalid email or password. Please check your credentials.');
+                    h = true;
+                }
+            }
+
+            if (!h) {
+                if (r) saveRememberedUser(e);
+                else state.rememberedEmail = '';
+                state.isLoggedIn = true;
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('dashboardScreen').classList.remove('hidden');
+                document.getElementById('authForm').reset();
+            }
+        }
+
+        function handleRegister() {
+            const u = document.getElementById('username').value;
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            const c = document.getElementById('confirmPassword').value;
+            let h = false;
+
+            clearError('username');
+            clearError('email');
+            clearError('password');
+            clearError('confirmPassword');
+
+            if (!u.trim()) {
+                showError('username', 'Username is required');
+                h = true;
+            } else if (u.length < 3) {
+                showError('username', 'Username must be at least 3 characters');
+                h = true;
+            }
+
+            if (!e) {
+                showError('email', 'Email is required');
+                h = true;
+            } else if (!validateEmail(e)) {
+                showError('email', 'Please enter a valid email address');
+                h = true;
+            } else if (state.registeredUsers.find(usr => usr.email === e)) {
+                showError('email', 'Email already registered');
+                h = true;
+            }
+
+            if (!p) {
+                showError('password', 'Password is required');
+                h = true;
+            } else {
+                const pCheck = validatePassword(p);
+                if (!pCheck.isValid) {
+                    showError('password', 'Password does not meet requirements');
+                    h = true;
+                }
+            }
+
+            if (!c) {
+                showError('confirmPassword', 'Please confirm your password');
+                h = true;
+            } else if (p !== c) {
+                showError('confirmPassword', 'Passwords do not match');
+                h = true;
+            }
+
+            if (!h) {
+                state.registeredUsers.push({ username: u, email: e, password: p });
+                alert('✨ Registration successful! Please login with your credentials.');
+                toggleAuthMode();
+                document.getElementById('authForm').reset();
+            }
+        }
+
+        function toggleAuthMode() {
+            state.showRegister = !state.showRegister;
+            const t = document.getElementById('authTitle');
+            const st = document.getElementById('authSubtitle');
+            const ab = document.getElementById('authButton');
+            const tb = document.getElementById('toggleAuthMode');
+            const ug = document.getElementById('usernameGroup');
+            const cpg = document.getElementById('confirmPasswordGroup');
+            const pr = document.getElementById('passwordRequirements');
+            const rmg = document.getElementById('rememberMeGroup');
+
+            if (state.showRegister) {
+                t.textContent = 'Create Account';
+                st.textContent = 'Register for admin access';
+                ab.innerHTML = '<span>Register</span>';
+                tb.textContent = 'Already have an account? Login';
+                ug.classList.remove('hidden');
+                cpg.classList.remove('hidden');
+                rmg.classList.add('hidden');
+            } else {
+                t.textContent = 'Welcome Back';
+                st.textContent = 'Sign in to your dashboard';
+                ab.innerHTML = '<span>Login</span>';
+                tb.textContent = "Don't have an account? Register";
+                ug.classList.add('hidden');
+                cpg.classList.add('hidden');
+                pr.classList.add('hidden');
+                rmg.classList.remove('hidden');
+            }
+
+            document.getElementById('authForm').reset();
+            clearError('username');
+            clearError('email');
+            clearError('password');
+            clearError('confirmPassword');
+            clearError('login');
+            loadRememberedUser();
+        }
+
+        function handleLogout() {
+            state.isLoggedIn = false;
+            state.activeSection = 'upload';
+            document.getElementById('dashboardScreen').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('authForm').reset();
+            updateActiveSection('upload');
+            loadRememberedUser();
+        }
+
+        function toggleSidebar() {
+            state.sidebarOpen = !state.sidebarOpen;
+            const sb = document.getElementById('sidebar');
+            const mi = document.getElementById('menuIcon');
+            if (state.sidebarOpen) {
+                sb.classList.remove('closed');
+                mi.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
+            } else {
+                sb.classList.add('closed');
+                mi.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />';
+            }
+        }
+
+        function togglePasswordVisibility(inputId, buttonId) {
+            const inp = document.getElementById(inputId);
+            const btn = document.getElementById(buttonId);
+            const isPass = inp.type === 'password';
+            inp.type = isPass ? 'text' : 'password';
+            btn.innerHTML = isPass
+                ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>';
+        }
+
+        function updateActiveSection(section) {
+            state.activeSection = section;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.dataset.section === section) {
+                    item.classList.add('active');
+                } else if (item.dataset.section === 'model-viewer' && section.startsWith('model-viewer')) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            document.querySelectorAll('.nav-subitem').forEach(item => {
+                if (item.dataset.section === section) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            const item = menuItems[section];
+            document.getElementById('headerTitle').textContent = item.label;
+
+            const mc = document.getElementById('mainContent');
+            if (section === 'ar-modes') {
+                mc.innerHTML = '<div class="experiences-section"><h2 class="section-title">AR Modes</h2><div class="experiences-grid">' +
+                    arExperiences.map((exp, idx) => `<div class="experience-card" onclick="showInfoModal(${idx})"><img src="${exp.img}" alt="${exp.title}" class="experience-image"><div class="experience-info"><h3>${exp.title}</h3><p>${exp.desc.substring(0, 80)}...</p></div><div class="experience-overlay"><button class="visit-button"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg><span>View Details</span></button></div></div>`).join('') +
+                    '</div></div>';
+            } else if (section === 'model-viewer-home') {
+                mc.innerHTML = '<div class="model-viewer-container"><div class="home-section"><div class="home-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div><h1 class="home-title">Welcome to 3D Model Viewer</h1><p class="home-tagline">Explore, Upload, and Showcase Your 3D Creations</p><p class="home-description">Transform your 3D models into stunning interactive experiences. Our platform provides a seamless way to upload, manage, and share your 3D creations with the world. Whether you\'re an artist, designer, or enthusiast, we make 3D visualization simple and beautiful.</p></div></div>';
+            } else if (section === 'model-viewer-upload') {
+                renderUploadSection();
+            } else if (section === 'model-viewer-about') {
+                mc.innerHTML = '<div class="model-viewer-container"><div style="background: rgba(29, 15, 51, 0.7); backdrop-filter: blur(20px); border-radius: 24px; border: 2px solid #a855f7; padding: 3rem; box-shadow: 0 25px 50px rgba(168, 85, 247, 0.3);"><h2 style="font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2.5rem; text-align: center;">About Us</h2><p style="color: #d1d5db; text-align: center; font-size: 1.2rem; line-height: 1.9; margin-bottom: 3rem;">We are passionate about making 3D visualization accessible to everyone. Our platform combines cutting-edge technology with user-friendly design to bring your 3D models to life.</p><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;"><div style="background: rgba(61, 31, 92, 0.4); padding: 2.5rem; border-radius: 20px; border: 2px solid rgba(168, 85, 247, 0.3); text-align: center;"><svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #c084fc;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg><h3 style="color: white; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 700;">Fast & Reliable</h3><p style="color: #d1d5db; line-height: 1.7;">Lightning-fast uploads and rendering with 99.9% uptime guarantee for seamless 3D model management.</p></div><div style="background: rgba(61, 31, 92, 0.4); padding: 2.5rem; border-radius: 20px; border: 2px solid rgba(168, 85, 247, 0.3); text-align: center;"><svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #c084fc;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg><h3 style="color: white; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 700;">Secure Storage</h3><p style="color: #d1d5db; line-height: 1.7;">Your models are protected with enterprise-grade encryption and secure cloud storage infrastructure.</p></div><div style="background: rgba(61, 31, 92, 0.4); padding: 2.5rem; border-radius: 20px; border: 2px solid rgba(168, 85, 247, 0.3); text-align: center;"><svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #c084fc;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg><h3 style="color: white; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 700;">Community Driven</h3><p style="color: #d1d5db; line-height: 1.7;">Join a vibrant community of 3D artists, designers, and creators sharing their amazing work.</p></div></div></div></div>';
+            } else {
+                mc.innerHTML = '<div class="content-center"><div class="content-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="' + item.icon + '" /></svg></div><h2 class="content-title">' + item.label + '</h2><p class="content-description">This is your main workspace. Content and functionality for ' + section + ' will appear here.</p></div>';
+            }
+        }
+
+        function renderUploadSection() {
+            const mc = document.getElementById('mainContent');
+            mc.innerHTML = '<div class="model-viewer-container"><div style="background: rgba(29, 15, 51, 0.7); backdrop-filter: blur(20px); border-radius: 24px; border: 2px solid #a855f7; padding: 3rem; box-shadow: 0 25px 50px rgba(168, 85, 247, 0.3); position: relative; overflow: hidden;"><h2 style="font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 2.5rem; text-align: center;">Upload Your 3D Model</h2><form style="max-width: 800px; margin: 0 auto;" id="modelUploadForm"><div style="margin-bottom: 2rem;"><label style="display: block; font-size: 0.95rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Object Name *</label><input type="text" id="objectName" placeholder="Enter object name" required style="width: 100%; padding: 1rem 1.25rem; background: rgba(61, 31, 92, 0.5); border: 2px solid rgba(168, 85, 247, 0.3); border-radius: 12px; color: white; font-size: 1rem; transition: all 0.3s ease;"></div><div style="margin-bottom: 2rem;"><label style="display: block; font-size: 0.95rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Description (Optional)</label><textarea id="modelDescription" placeholder="Add a description for your model" style="width: 100%; padding: 1rem 1.25rem; background: rgba(61, 31, 92, 0.5); border: 2px solid rgba(168, 85, 247, 0.3); border-radius: 12px; color: white; font-size: 1rem; transition: all 0.3s ease; resize: vertical; min-height: 120px;"></textarea></div><div style="margin-bottom: 2rem;"><label style="display: block; font-size: 0.95rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Preview Images</label><input type="file" id="modelImageInput" accept="image/*" multiple style="display: none;"><button type="button" id="chooseImagesBtn" style="width: 100%; padding: 1rem; background: rgba(61, 31, 92, 0.8); color: white; border: 2px solid rgba(168, 85, 247, 0.5); border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">Choose Images</button><div id="modelImagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.25rem; margin-top: 1.25rem;"></div></div><div style="margin-bottom: 2rem;"><label style="display: block; font-size: 0.95rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">3D Model File *</label><input type="file" id="modelFileInput" accept=".obj,.fbx,.gltf,.glb,.stl" required style="display: none;"><div id="modelDropZone" style="border: 3px dashed #a855f7; border-radius: 16px; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(168, 85, 247, 0.05);"><svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #a855f7;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg><p id="modelDropZoneText" style="color: #e5e7eb; font-size: 1.25rem; margin-bottom: 0.75rem; font-weight: 600;">Drag and drop your 3D model here</p><p style="color: #9ca3af; font-size: 0.95rem;">or click to browse (OBJ, FBX, GLTF, GLB, STL)</p></div></div><div style="display: flex; gap: 1.5rem; margin-top: 2.5rem;"><button type="button" id="resetModelBtn" style="flex: 1; padding: 1rem; background: rgba(61, 31, 92, 0.8); color: white; border: 2px solid rgba(168, 85, 247, 0.5); border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">Reset</button><button type="submit" style="flex: 1; padding: 1rem; background: linear-gradient(135deg, #a855f7, #ec4899); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 10px 25px rgba(168, 85, 247, 0.4); text-transform: uppercase; letter-spacing: 0.5px; position: relative; overflow: hidden;">Upload Model</button></div></form></div></div>';
+            setupModelUploadHandlers();
+        }
+
+        function setupModelUploadHandlers() {
+            state.modelImageState.previewImages = [];
+
+            const imgBtn = document.getElementById('chooseImagesBtn');
+            if (imgBtn) {
+                imgBtn.onclick = () => document.getElementById('modelImageInput').click();
+            }
+
+            const imgInput = document.getElementById('modelImageInput');
+            if (imgInput) {
+                imgInput.onchange = function (e) {
+                    Array.from(e.target.files).forEach(f => {
+                        if (f.type.startsWith('image/')) {
+                            const r = new FileReader();
+                            r.onload = ev => {
+                                state.modelImageState.previewImages.push({ data: ev.target.result, name: f.name });
+                                renderModelImagePreviews();
+                            };
+                            r.readAsDataURL(f);
+                        }
+                    });
+                };
+            }
+
+            const fileInput = document.getElementById('modelFileInput');
+            if (fileInput) {
+                fileInput.onchange = function (e) {
+                    const f = e.target.files[0];
+                    if (f) {
+                        const txt = document.getElementById('modelDropZoneText');
+                        if (txt) txt.textContent = 'Selected: ' + f.name;
+                    }
+                };
+            }
+
+            const form = document.getElementById('modelUploadForm');
+            if (form) {
+                form.onsubmit = function (e) {
+                    e.preventDefault();
+                    const n = document.getElementById('objectName').value;
+                    const d = document.getElementById('modelDescription').value;
+                    const mf = document.getElementById('modelFileInput').files[0];
+                    if (n && mf) {
+                        alert('Model "' + n + '" uploaded successfully!\n\nFile: ' + mf.name + '\nImages: ' + state.modelImageState.previewImages.length + '\nDescription: ' + (d || 'None'));
+                        resetModelUploadForm();
+                    }
+                };
+            }
+
+            const dropZone = document.getElementById('modelDropZone');
+            if (dropZone) {
+                dropZone.onclick = () => document.getElementById('modelFileInput').click();
+                dropZone.ondragover = function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.style.borderColor = '#ec4899';
+                    this.style.transform = 'scale(1.02)';
+                };
+                dropZone.ondragleave = function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.style.borderColor = '#a855f7';
+                    this.style.transform = 'scale(1)';
+                };
+                dropZone.ondrop = function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.style.borderColor = '#a855f7';
+                    this.style.transform = 'scale(1)';
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const mi = document.getElementById('modelFileInput');
+                        if (mi) {
+                            mi.files = files;
+                            const txt = document.getElementById('modelDropZoneText');
+                            if (txt) txt.textContent = 'Selected: ' + files[0].name;
+                        }
+                    }
+                };
+            }
+
+            const resetBtn = document.getElementById('resetModelBtn');
+            if (resetBtn) {
+                resetBtn.onclick = resetModelUploadForm;
+            }
+        }
+
+        function renderModelImagePreviews() {
+            const c = document.getElementById('modelImagePreview');
+            if (!c) return;
+            c.innerHTML = '';
+            state.modelImageState.previewImages.forEach((img, i) => {
+                const d = document.createElement('div');
+                d.style.cssText = 'position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 3px solid #a855f7; box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3); transition: all 0.3s ease;';
+                d.innerHTML = '<img src="' + img.data + '" alt="' + img.name + '" style="width: 100%; height: 100%; object-fit: cover;"><button type="button" onclick="removeModelPreviewImage(' + i + ')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: linear-gradient(135deg, #dc2626, #ef4444); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; line-height: 1; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);">×</button>';
+                c.appendChild(d);
+            });
+        }
+
+        function removeModelPreviewImage(i) {
+            state.modelImageState.previewImages.splice(i, 1);
+            renderModelImagePreviews();
+        }
+
+        function resetModelUploadForm() {
+            const f = document.getElementById('modelUploadForm');
+            if (f) f.reset();
+            const p = document.getElementById('modelImagePreview');
+            if (p) p.innerHTML = '';
+            const t = document.getElementById('modelDropZoneText');
+            if (t) t.textContent = 'Drag and drop your 3D model here';
+            state.modelImageState.previewImages = [];
+        }
+
+        function showInfoModal(i) {
+            const exp = arExperiences[i];
+            document.getElementById('modalTitle').textContent = exp.title;
+            document.getElementById('modalImage').src = exp.img;
+            document.getElementById('modalStatus').textContent = exp.status;
+            document.getElementById('modalStatus').className = 'stat-value ' + (exp.status === 'Active' ? 'active' : 'beta');
+            document.getElementById('modalDate').textContent = exp.date;
+            document.getElementById('modalViews').textContent = exp.views;
+            document.getElementById('modalRating').textContent = exp.rating;
+            document.getElementById('modalDescription').textContent = exp.fullDesc;
+            document.getElementById('infoModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+
+        function launchExperience() {
+            closeModal();
+            setTimeout(() => {
+                const tm = document.createElement('div');
+                tm.className = 'modal active';
+                tm.style.zIndex = '1001';
+                tm.innerHTML = '<div class="modal-content" style="max-width: 400px; text-align: center;"><h3 class="modal-title">🚀 Launching AR Experience</h3><p style="color: #9ca3af; margin: 1.5rem 0;">Initializing augmented reality environment...</p><button class="modal-button" style="width: 100%;">Close</button></div>';
+                document.body.appendChild(tm);
+                tm.querySelector('.modal-button').onclick = () => tm.remove();
+                tm.onclick = e => { if (e.target === tm) tm.remove(); };
+            }, 300);
+        }
+
+        document.getElementById('authForm').onsubmit = e => { e.preventDefault(); state.showRegister ? handleRegister() : handleLogin(); };
+        document.getElementById('toggleAuthMode').onclick = toggleAuthMode;
+        document.getElementById('logoutBtn').onclick = handleLogout;
+        document.getElementById('menuToggle').onclick = toggleSidebar;
+        document.getElementById('togglePassword').onclick = () => togglePasswordVisibility('password', 'togglePassword');
+        document.getElementById('toggleConfirmPassword').onclick = () => togglePasswordVisibility('confirmPassword', 'toggleConfirmPassword');
+        document.getElementById('closeModalBtn').onclick = closeModal;
+        document.getElementById('launchButton').onclick = launchExperience;
+        document.getElementById('viewerBtn').onclick = () => {
+            updateActiveSection('model-viewer-home');
+            const sm = document.getElementById('modelViewerSubmenu');
+            const p = document.querySelector('[data-section="model-viewer"]');
+            if (sm && p) {
+                sm.classList.add('expanded');
+                p.classList.add('expanded');
+            }
+        };
+
+        const mvp = document.querySelector('[data-section="model-viewer"]');
+        if (mvp) {
+            mvp.onclick = function (e) {
+                e.stopPropagation();
+                const sm = document.getElementById('modelViewerSubmenu');
+                const isExp = sm.classList.contains('expanded');
+                if (isExp) {
+                    sm.classList.remove('expanded');
+                    this.classList.remove('expanded');
+                } else {
+                    sm.classList.add('expanded');
+                    this.classList.add('expanded');
+                    updateActiveSection('model-viewer-home');
+                }
+            };
+        }
+
+        document.getElementById('password').oninput = function (e) {
+            if (state.showRegister && e.target.value) {
+                document.getElementById('passwordRequirements').classList.remove('hidden');
+                updatePasswordRequirements();
+            } else if (state.showRegister) {
+                document.getElementById('passwordRequirements').classList.add('hidden');
+            }
+        };
+
+        ['username', 'email', 'password', 'confirmPassword'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.oninput = () => clearError(id);
+        });
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.dataset.section !== 'model-viewer') {
+                item.onclick = () => updateActiveSection(item.dataset.section);
+            }
+        });
+
+        document.querySelectorAll('.nav-subitem').forEach(item => {
+            item.onclick = e => { e.stopPropagation(); updateActiveSection(item.dataset.section); };
+        });
+
+        document.getElementById('infoModal').onclick = function (e) { if (e.target === this) closeModal(); };
+
+        generateStars();
+        updateActiveSection('upload');
+        loadRememberedUser();
+    </script>
+</body>
+
+</html>
