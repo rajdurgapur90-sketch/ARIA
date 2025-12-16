@@ -11,11 +11,10 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            /* Applying the animated gradient background from the image */
             background: linear-gradient(-45deg, #1e0b3a, #2c0f4d, #0f0517, #000000);
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
-            overflow: hidden; /* Hide scrollbars from the starry background */
+            overflow: hidden; 
         }
 
         @keyframes gradientBG {
@@ -27,19 +26,16 @@
         .option-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
             border: 2px solid rgba(255, 255, 255, 0.1);
-            /* Frosted glass effect */
             background-color: rgba(0, 0, 0, 0.25);
             backdrop-filter: blur(10px);
         }
 
         .option-card:hover {
             transform: translateY(-8px);
-            /* Purple glow effect matching the image's button */
             box-shadow: 0 0 25px 5px rgba(192, 132, 252, 0.4);
             border-color: rgba(192, 132, 252, 0.8);
         }
 
-        /* Starry background effect */
         #stars {
             position: fixed;
             top: 0;
@@ -60,14 +56,24 @@
             0%, 100% { opacity: 0; }
             50% { opacity: 1; }
         }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #c084fc;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+            display: none; 
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-white flex flex-col items-center justify-center min-h-screen p-6 relative">
 
-    <!-- Starry background container -->
     <div id="stars"></div>
 
-    <!-- Project Name in the corner -->
     <header class="absolute top-0 left-0 w-full p-6 md:p-8">
         <h1 class="text-2xl font-bold tracking-wider text-white">ARIA</h1>
     </header>
@@ -78,23 +84,25 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 w-full max-w-4xl z-10">
-        <!-- Option 1: Launch and then upload from within the app -->
         <div id="launch-and-upload-card" class="option-card rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer text-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-4 text-purple-300"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             <h3 class="font-semibold text-xl mb-2">Launch Blank Canvas</h3>
             <p class="text-gray-300 text-sm">Open the AR viewer and upload a model from your Device.</p>
         </div>
         
-        <!-- Option 2: Use a model from a GitHub repository -->
         <div id="server-model-card" class="option-card rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-4 text-purple-300"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m16 17-4 4-4-4"></path></svg>
+            <div id="live-icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-4 text-purple-300"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m16 17-4 4-4-4"></path></svg>
+            </div>
+            <div id="live-loader" class="spinner"></div>
+            
             <h3 class="font-semibold text-xl mb-2">Launch with Live Model</h3>
-            <p class="text-gray-300 text-sm">Open the AR viewer with the Live model Loaded.</p>
+            <p id="live-model-status" class="text-gray-300 text-sm">Loading active model...</p>
         </div>
     </div>
 
     <div class="mt-12 text-center z-10">
-        <a href="UserDashboard.html" class="text-gray-400 hover:text-white transition-colors duration-300 inline-flex items-center">
+        <a href="user_dashboard.html" class="text-gray-400 hover:text-white transition-colors duration-300 inline-flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back to Dashboard
         </a>
@@ -105,6 +113,14 @@
             const launchAndUploadCard = document.getElementById('launch-and-upload-card');
             const serverModelCard = document.getElementById('server-model-card');
             const starsContainer = document.getElementById('stars');
+            const liveStatusText = document.getElementById('live-model-status');
+            const liveLoader = document.getElementById('live-loader');
+            const liveIcon = document.getElementById('live-icon-container');
+
+            // URL from your Admin Dashboard code
+            const MODEL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzGZq-XQUS7ky4alh5lSEBtFGbWrY2w74T1bFSh-_c_yFJo7Zu_IkLgII7jsK9lDFp3/exec";
+            
+            let liveModelData = null;
 
             // --- Starry Background Logic ---
             const createStars = () => {
@@ -112,57 +128,85 @@
                 for (let i = 0; i < starCount; i++) {
                     const star = document.createElement('div');
                     star.classList.add('star');
-                    
                     const size = Math.random() * 3 + 1;
                     star.style.width = `${size}px`;
                     star.style.height = `${size}px`;
-
                     star.style.top = `${Math.random() * 100}%`;
                     star.style.left = `${Math.random() * 100}%`;
-
-                    const duration = Math.random() * 2 + 3; // Twinkle duration between 3s and 5s
-                    const delay = Math.random() * 3; // Start twinkling at different times
+                    const duration = Math.random() * 2 + 3; 
+                    const delay = Math.random() * 3; 
                     star.style.animationDuration = `${duration}s`;
                     star.style.animationDelay = `${delay}s`;
-
                     starsContainer.appendChild(star);
                 }
             };
             createStars();
-            // --- End Starry Background Logic ---
 
+            // --- FETCH LIVE MODEL LOGIC ---
+            async function fetchLiveModel() {
+                liveIcon.style.display = 'none';
+                liveLoader.style.display = 'block';
+                liveStatusText.textContent = "Connecting to server...";
 
-            const githubModel = {
-                name: 'Live Model',
-                // This is now a fallback URL. The code below will try to replace it.
-                url: 'https://raw.githubusercontent.com/USER/REPO/main/PATH/TO/YOUR/model.gltf'
-            };
+                try {
+                    const response = await fetch(MODEL_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ action: 'getModels' })
+                    });
+                    const data = await response.json();
 
-            // --- NEW LOGIC ---
-            // 1. Read the URL from the dashboard
-            const urlParams = new URLSearchParams(window.location.search);
-            const liveUrlFromDashboard = urlParams.get('liveUrl');
-
-            // 2. If the URL exists, update the githubModel object
-            if (liveUrlFromDashboard) {
-                githubModel.url = decodeURIComponent(liveUrlFromDashboard);
+                    if (data.result === 'success') {
+                        // Find the model where 'live' is true
+                        const liveModel = data.data.find(m => m.live === true);
+                        
+                        if (liveModel) {
+                            liveModelData = liveModel;
+                            liveStatusText.textContent = `Ready: ${liveModel.name}`;
+                            liveStatusText.style.color = "#a7f3d0"; 
+                        } else {
+                            liveStatusText.textContent = "No live model currently set by Admin.";
+                            liveStatusText.style.color = "#fca5a5"; 
+                        }
+                    } else {
+                        liveStatusText.textContent = "Error fetching model list.";
+                    }
+                } catch (error) {
+                    console.error("Error fetching live model:", error);
+                    liveStatusText.textContent = "Connection failed.";
+                } finally {
+                    liveLoader.style.display = 'none';
+                    liveIcon.style.display = 'block';
+                }
             }
-            // --- END NEW LOGIC ---
 
+            fetchLiveModel();
 
-            // This card launches the viewer empty, ready for an in-app upload.
+            // --- CLICK HANDLERS ---
+
             launchAndUploadCard.addEventListener('click', () => {
                 window.location.href = 'Model_Viewer.html';
             });
 
-            // This card launches with the model URL (either the new live one or the fallback).
             serverModelCard.addEventListener('click', () => {
-                const viewerUrl = `Model_Viewer.html?modelUrl=${encodeURIComponent(githubModel.url)}&modelName=${encodeURIComponent(githubModel.name)}`;
-                window.location.href = viewerUrl;
+                if (liveModelData) {
+                    // MODIFIED: Pass annotations if they exist
+                    let url = `Model_Viewer.html?modelUrl=${encodeURIComponent(liveModelData.link)}&modelName=${encodeURIComponent(liveModelData.name)}`;
+                    
+                    if (liveModelData.annotations && liveModelData.annotations !== '[]') {
+                        url += `&modelAnnotations=${encodeURIComponent(liveModelData.annotations)}`;
+                    }
+
+                    window.location.href = url;
+                } else {
+                    if(liveStatusText.textContent.includes("No live model") || liveStatusText.textContent.includes("Connection failed")) {
+                        alert("Cannot launch: " + liveStatusText.textContent);
+                        fetchLiveModel(); // Retry
+                    } 
+                }
             });
         });
     </script>
 
 </body>
 </html>
-
