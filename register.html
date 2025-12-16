@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; overflow-x: hidden; }
+        
+        /* Background & Animation Styles (Matches Login) */
+        .container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 25%, #2d1b4e 50%, #1a0a2e 75%, #0a0a1f 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        .stars { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle ease-in-out infinite; box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
+        
+        .glow-orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.3; pointer-events: none; z-index: 0; animation: floatOrb 20s ease-in-out infinite; }
+        .orb-1 { width: 400px; height: 400px; background: radial-gradient(circle, #9333ea, transparent); top: -100px; left: -100px; }
+        .orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, #ec4899, transparent); bottom: -150px; right: -150px; animation-delay: -5s; }
+        @keyframes floatOrb { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 33% { transform: translate(100px, -100px) rotate(120deg); } 66% { transform: translate(-100px, 100px) rotate(240deg); } }
+
+        /* Auth Panel Styles */
+        .auth-container { position: relative; z-index: 10; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .auth-panel {
+            background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(20px); border-radius: 1.5rem;
+            box-shadow: 0 25px 60px -12px rgba(147, 51, 234, 0.4), 0 0 0 1px rgba(147, 51, 234, 0.3);
+            padding: 2.5rem; width: 100%; max-width: 28rem; border: 1px solid rgba(147, 51, 234, 0.5);
+            animation: slideUp 0.6s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .auth-header { text-align: center; margin-bottom: 2rem; }
+        .icon-badge {
+            display: inline-block; padding: 1.2rem; background: linear-gradient(135deg, #9333ea, #ec4899);
+            border-radius: 50%; margin-bottom: 1.5rem; animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+        }
+        .icon-badge svg { width: 44px; height: 44px; color: white; }
+        
+        h2 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.75rem; }
+        .subtitle { color: #9ca3af; font-size: 0.95rem; }
+        
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem; }
+        .input-wrapper { position: relative; }
+        
+        input {
+            width: 100%; padding: 0.875rem 1rem; background: rgba(55, 65, 81, 0.6);
+            border: 1.5px solid rgba(75, 85, 99, 0.5); border-radius: 0.75rem; color: white;
+            font-size: 1rem; transition: all 0.3s;
+        }
+        input:focus { outline: none; border-color: #9333ea; background: rgba(55, 65, 81, 0.8); box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.2); transform: translateY(-2px); }
+        input.error { border-color: #ef4444; animation: shake 0.5s ease; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+
+        .error-message { margin-top: 0.5rem; font-size: 0.875rem; color: #fca5a5; display: none; }
+        .error-message.visible { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .btn-primary {
+            width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #9333ea, #ec4899);
+            color: white; border: none; border-radius: 0.75rem; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.5);
+            display: flex; justify-content: center; align-items: center;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 15px 35px -5px rgba(147, 51, 234, 0.7); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .spinner {
+            width: 20px; height: 20px; border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite;
+            display: none;
+        }
+        .btn-primary.loading .spinner { display: block; }
+        .btn-primary.loading span { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toggle-auth { margin-top: 1.5rem; text-align: center; }
+        .toggle-auth a { color: #c084fc; font-size: 0.875rem; text-decoration: none; transition: all 0.3s; }
+        .toggle-auth a:hover { color: #d8b4fe; text-decoration: underline; }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            display: flex; align-items: flex-start; gap: 12px; padding: 16px;
+            background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            color: #fff; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transform: translateX(120%); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 350px; pointer-events: auto;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        .toast-icon { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast-content { display: flex; flex-direction: column; gap: 2px; }
+        .toast-title { font-weight: 600; font-size: 0.95rem; color: #fff; }
+        .toast-message { font-size: 0.85rem; color: #9ca3af; line-height: 1.4; }
+    </style>
+</head>
+
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <div class="stars" id="starsContainer"></div>
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+
+        <div class="auth-container">
+            <div class="auth-panel">
+                <div class="auth-header">
+                    <div class="icon-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+                    <h2>Create Account</h2>
+                    <p class="subtitle">Join the admin portal</p>
+                </div>
+                
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="username" placeholder="Choose a username">
+                        <p class="error-message" id="usernameError"></p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="Enter your email">
+                        <p class="error-message" id="emailError"></p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" placeholder="Create password">
+                        <p class="error-message" id="passwordError"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirm password">
+                        <p class="error-message" id="confirmPasswordError"></p>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <span>Register</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+
+                <div class="toggle-auth">
+                    <a href="login.html">Already have an account? Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-QpQtj42Nr5i-Sy6w-mmHDpA7XddMRW0ZD-K_xD7sBtaR1qQtWU9BvPuxWs_Ks98gUQ/exec"; 
+
+        function generateStars() {
+            const c = document.getElementById('starsContainer');
+            for (let i = 0; i < 150; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                const sz = Math.random() * 3 + 1;
+                s.style.width = sz + 'px';
+                s.style.height = sz + 'px';
+                s.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                c.appendChild(s);
+            }
+        }
+
+        // --- NEW TOAST FUNCTION ---
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const iconSvg = type === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />' 
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
+            
+            const title = type === 'success' ? 'Success' : 'Error';
+
+            toast.innerHTML = `
+                <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    ${iconSvg}
+                </svg>
+                <div class="toast-content">
+                    <span class="toast-title">${title}</span>
+                    <span class="toast-message">${message}</span>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            
+            // Trigger animation
+            requestAnimationFrame(() => toast.classList.add('show'));
+
+            // Remove after delay
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+
+        function showError(field, message) {
+            const input = document.getElementById(field);
+            const error = document.getElementById(field + 'Error');
+            input.classList.add('error');
+            error.textContent = message;
+            error.classList.add('visible');
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('input').forEach(el => el.classList.remove('error'));
+            document.querySelectorAll('.error-message').forEach(el => el.classList.remove('visible'));
+        }
+
+        function setLoading(loading) {
+            const btn = document.getElementById('submitBtn');
+            if (loading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearErrors();
+
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            let hasError = false;
+
+            // Validation
+            if (username.length < 3) {
+                showError('username', 'Username must be at least 3 characters');
+                hasError = true;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showError('email', 'Invalid email address');
+                hasError = true;
+            }
+            if (password.length < 8) {
+                showError('password', 'Password must be at least 8 characters');
+                hasError = true;
+            }
+            if (password !== confirmPassword) {
+                showError('confirmPassword', 'Passwords do not match');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            setLoading(true);
+
+            try {
+                // FIXED: Added Content-Type: text/plain to avoid CORS Preflight error
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8",
+                    },
+                    body: JSON.stringify({
+                        action: 'register',
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+                setLoading(false);
+
+                if (data.result === 'success') {
+                    showToast('Registration Successful! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = 'login.html', 1500);
+                } else {
+                    showToast(data.message || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                setLoading(false);
+                console.error('Error:', error);
+                showToast('Network Error: Ensure script is deployed as "Me" and accessible to "Anyone".', 'error');
+            }
+        });
+
+        generateStars();
+    </script>
+</body>
+</html>
