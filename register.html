@@ -167,7 +167,7 @@
                 </form>
 
                 <div class="toggle-auth">
-                    <a href="login.html">Already have an account? Login</a>
+                    <a href="login_user.html">Already have an account? Login</a>
                 </div>
             </div>
         </div>
@@ -302,7 +302,7 @@
 
                 if (data.result === 'success') {
                     showToast('Registration Successful! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = 'login.html', 1500);
+                    setTimeout(() => window.location.href = 'login_user.html', 1500);
                 } else {
                     showToast(data.message || 'Registration failed', 'error');
                 }
