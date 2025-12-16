@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIA - AR Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 25%, #2d1b4e 50%, #1a0a2e 75%, #0a0a1f 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .stars {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle ease-in-out infinite;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.3);
+            }
+        }
+
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #9333ea, transparent);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #ec4899, transparent);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #3b82f6, transparent);
+            top: 50%;
+            left: 50%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            33% {
+                transform: translate(100px, -100px) rotate(120deg);
+            }
+
+            66% {
+                transform: translate(-100px, 100px) rotate(240deg);
+            }
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #a855f7, #f472b6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+
+        .btn-primary span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px -5px rgba(147, 51, 234, 0.7);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 1.2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 999;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(147, 51, 234, 0.2);
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(147, 51, 234, 0.3);
+        }
+
+        .navbar.scrolled {
+            padding: 0.8rem 5%;
+            background: rgba(17, 24, 39, 0.95);
+        }
+
+        .site-name {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 10px rgba(147, 51, 234, 0.5));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.8));
+            }
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #d1d5db;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            cursor: pointer;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #9333ea, #ec4899);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: #c084fc;
+            transform: translateY(-2px);
+        }
+        
+        .nav-links a.active {
+            color: #c084fc;
+        }
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
+        .nav-links .logout-btn:hover {
+            color: #f87171; 
+        }
+        .nav-links .logout-btn:hover::after {
+            background: linear-gradient(90deg, #f87171, #ef4444);
+        }
+
+        .main-content {
+            padding-top: 100px;
+            padding-bottom: 4rem;
+            padding-left: 5%;
+            padding-right: 5%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* View Switching Logic */
+        .view-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        
+        .view-section.active-view {
+            display: block;
+            opacity: 1;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-top: 8rem;
+            margin-bottom: 3rem;
+            padding: 3rem 0;
+        }
+
+        .welcome-section h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #c084fc 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textGlow 3s ease-in-out infinite;
+        }
+
+        .welcome-user-name {
+            color: #c084fc;
+        }
+
+        @keyframes textGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(236, 72, 153, 0.5)); }
+        }
+
+        .welcome-section p {
+            font-size: 1.3rem;
+            color: #9ca3af;
+            font-weight: 300;
+        }
+
+        /* --- NEW PROFESSIONAL ACCOUNT SECTION STYLES --- */
+        .profile-container {
+            max-width: 900px;
+            margin: 6rem auto 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            background: #05050a;
+            border: 1px solid #1f1f3a;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            min-height: 450px;
+        }
+
+        /* Sidebar Styling */
+        .profile-sidebar {
+            background: #020205;
+            border-right: 1px solid #1f1f3a;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .sidebar-avatar {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #7c3aed, #db2777);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+            margin-bottom: 1.5rem;
+            border: 4px solid #05050a;
+        }
+
+        .sidebar-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-role {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            background: rgba(148, 163, 184, 0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+
+        .sidebar-nav {
+            width: 100%;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-link {
+            width: 100%;
+            padding: 12px 20px;
+            text-align: left;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(90deg, rgba(124, 58, 237, 0.1), transparent);
+            color: #c084fc;
+            border-left: 3px solid #c084fc;
+        }
+
+        .sidebar-link:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+        }
+
+        /* Main Content Styling */
+        .profile-content {
+            padding: 40px 50px;
+            background: #0b0b15;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-header {
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid #1f1f3a;
+            padding-bottom: 1.5rem;
+        }
+
+        .content-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-subtitle {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-bottom: auto; /* Push footer down */
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            background: #131320;
+            border: 1px solid #2d2d45;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .form-input[readonly] {
+            cursor: default;
+            color: #cbd5e1;
+        }
+
+        /* Actions Footer */
+        .actions-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 2rem;
+            border-top: 1px solid #1f1f3a;
+            margin-top: 3rem;
+        }
+
+        .btn-pro {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .btn-pro-primary {
+            background: #7c3aed;
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-pro-primary:hover {
+            background: #6d28d9;
+            transform: translateY(-1px);
+        }
+
+        .btn-pro-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-pro-danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        @media (max-width: 850px) {
+            .profile-container {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+            .profile-sidebar {
+                border-right: none;
+                border-bottom: 1px solid #1f1f3a;
+                padding: 30px;
+            }
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: center;
+            }
+            .sidebar-link {
+                width: auto;
+                justify-content: center;
+            }
+        }
+        /* --------------------------- */
+
+        .section-title {
+            font-size: 2.75rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .experiences-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .experience-card {
+            position: relative;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(147, 51, 234, 0.3);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            height: 350px;
+        }
+
+        .experience-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: rgba(147, 51, 234, 0.6);
+            box-shadow: 0 25px 60px rgba(147, 51, 234, 0.5);
+        }
+
+        .experience-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: all 0.5s ease;
+        }
+
+        .experience-card:hover .experience-image {
+            transform: scale(1.15);
+        }
+
+        .experience-info {
+            padding: 1.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .experience-info h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .experience-info p {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .experience-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, rgba(10, 10, 31, 0.95), transparent);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 2.5rem;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .experience-card:hover .experience-overlay {
+            opacity: 1;
+        }
+
+        .visit-button {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border: none;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4);
+        }
+
+        .visit-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(147, 51, 234, 0.6);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(147, 51, 234, 0.5);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            max-width: 500px;
+            text-align: center;
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 25px 60px rgba(147, 51, 234, 0.4);
+        }
+
+        .modal-content h2 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-content p {
+            color: #9ca3af;
+            /* margin-bottom: 1.5rem; */
+            font-size: 0.85rem;
+        }
+
+        .modal-button {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border: none;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4);
+            margin: 0.5rem;
+        }
+
+        .modal-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(147, 51, 234, 0.6);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 5px;
+        }
+
+        .menu-toggle span {
+            width: 28px;
+            height: 3px;
+            background: linear-gradient(90deg, #9333ea, #ec4899);
+            transition: all 0.3s ease;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-right {
+                position: fixed;
+                right: -100%;
+                top: 75px;
+                flex-direction: column;
+                background: rgba(17, 24, 39, 0.98);
+                backdrop-filter: blur(20px);
+                width: 100%;
+                padding: 2rem;
+                transition: right 0.4s ease;
+                border-top: 1px solid rgba(147, 51, 234, 0.3);
+            }
+            .nav-right.active {
+                right: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stars" id="starsContainer"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+
+    <div id="dashboardScreen">
+        <nav class="navbar" id="navbar">
+            <div class="site-name">
+                <i data-feather="layers"></i>
+                <span>ARIA</span>
+            </div>
+            <div class="nav-right" id="navRight">
+                <ul class="nav-links">
+                    <li><a href="#home" class="active"><i data-feather="home"></i> Home</a></li>
+                    <li><a href="#ar-modes"><i data-feather="camera"></i> AR Modes</a></li>
+                    <li><a href="#account"><i data-feather="user"></i> User</a></li>
+                    <li><a href="index.html" onclick="handleLogout(event)" class="logout-btn"><i data-feather="log-out"></i> Logout</a></li>
+                </ul>
+            </div>
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <!-- HOME VIEW -->
+            <div id="home-view" class="view-section active-view">
+                <div class="welcome-section">
+                    <h1>Welcome, <span id="welcomeUserName" class="welcome-user-name">Traveler</span></h1>
+                    <p>Ready to build amazing AR experiences?</p>
+                </div>
+
+                <div class="experiences-section" id="ar-modes">
+                    <div class="experiences-grid">
+                        <div class="experience-card" onclick="showInfoModal(0)">
+                            <img src="https://plus.unsplash.com/premium_photo-1681426687411-21986b0626a8?q=80&w=800&auto=format&fit=crop"
+                                alt="Product Showcase" class="experience-image">
+                            <div class="experience-info">
+                                <h3>3D Model Viewer</h3>
+                                <p>Interact with 3D Models</p>
+                            </div>
+                            <div class="experience-overlay">
+                                <button class="visit-button">
+                                    <i data-feather="external-link"></i>
+                                    <span>View Details</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="experience-card" onclick="showInfoModal(1)">
+                            <img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop"
+                                alt="VR Immersion" class="experience-image">
+                            <div class="experience-info">
+                                <h3>3D Shape Playground</h3>
+                                <p>Interact with 3D Shapes</p>
+                            </div>
+                            <div class="experience-overlay">
+                                <button class="visit-button">
+                                    <i data-feather="external-link"></i>
+                                    <span>View Details</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="experience-card" onclick="showInfoModal(2)">
+                            <img src="https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=800&auto=format&fit=crop"
+                                alt="Architecture Demo" class="experience-image">
+                            <div class="experience-info">
+                                <h3>AR Portal</h3>
+                                <p>Jump into another World through the Portal</p>
+                            </div>
+                            <div class="experience-overlay">
+                                <button class="visit-button">
+                                    <i data-feather="external-link"></i>
+                                    <span>View Details</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="experience-card" onclick="showInfoModal(3)">
+                            <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=800&auto=format&fit=crop"
+                                alt="AR Game" class="experience-image">
+                            <div class="experience-info">
+                                <h3>AR Mini Game</h3>
+                                <p>Interactive gaming experience</p>
+                            </div>
+                            <div class="experience-overlay">
+                                <button class="visit-button">
+                                    <i data-feather="external-link"></i>
+                                    <span>View Details</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="experience-card" onclick="showInfoModal(4)">
+                            <img src="https://images.unsplash.com/photo-1617791160505-6f00504e3519?q=80&w=800&auto=format&fit=crop"
+                                alt="Model Library" class="experience-image">
+                            <div class="experience-info">
+                                <h3>Model Library</h3>
+                                <p>Browse 3D Assets</p>
+                            </div>
+                            <div class="experience-overlay">
+                                <button class="visit-button">
+                                    <i data-feather="external-link"></i>
+                                    <span>View Details</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACCOUNT VIEW (Professional Design - Simplified) -->
+            <div id="account-view" class="view-section">
+                <div class="profile-container">
+                    
+                    <!-- Sidebar -->
+                    <div class="profile-sidebar">
+                        <div class="sidebar-avatar">
+                            <span id="avatarInitials">JD</span>
+                        </div>
+                        <h2 class="sidebar-name" id="displayUsernameSidebar">John Doe</h2>
+                        <span class="sidebar-role">Member</span>
+                        
+                        <div class="sidebar-nav">
+                            <button class="sidebar-link active">
+                                <i data-feather="user"></i> Profile
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="profile-content">
+                        <div class="content-header">
+                            <h2 class="content-title">Profile Settings</h2>
+                            <p class="content-subtitle">Manage your personal information.</p>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Username</label>
+                                <input type="text" id="inputUsername" class="form-input" readonly value="johndoe">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" id="inputEmail" class="form-input" readonly value="john@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Joined Date</label>
+                                <input type="text" id="inputDate" class="form-input" readonly value="2024-01-01">
+                            </div>
+                        </div>
+
+                        <div class="actions-footer">
+                            <button class="btn-pro btn-pro-danger" onclick="handleDeleteAccount()">Delete Account</button>
+                            <button class="btn-pro btn-pro-primary" onclick="handleUpdateProfile()">Update Profile</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modals remain the same -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2>Scene Created!</h2>
+            <p>Your new AR scene has been successfully created and is ready for editing.</p>
+            <button class="modal-button" onclick="closeModal()">Got it!</button>
+        </div>
+    </div>
+
+    <div class="modal" id="infoModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="text-align: left;">
+                <h2 id="infoTitle" style="margin-bottom: 1.5rem;">Project Details</h2>
+                <div
+                    style="background: rgba(0, 0, 0, 0.4); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem; border: 1px solid rgba(147, 51, 234, 0.3);">
+                    <img id="infoImage" src="" alt="Project"
+                        style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.75rem;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div>
+                            <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;">Status</p>
+                            <p id="infoStatus" style="color: #10b981; font-weight: 600; font-size: 0.75rem;">Active</p>
+                        </div>
+                        <div>
+                            <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;">Created</p>
+                            <p id="infoDate" style="color: #c084fc; font-weight: 600; font-size: 0.75rem;">2024-01-15
+                            </p>
+                        </div>
+                        <div>
+                            <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;">Views</p>
+                            <p id="infoViews" style="color: #818cf8; font-weight: 600; font-size: 0.75rem;">1,234</p>
+                        </div>
+                        <div>
+                            <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem;">Rating</p>
+                            <p id="infoRating" style="color: #f59e0b; font-weight: 600; font-size: 0.75rem;">4.8 ⭐</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p style="color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem; margin-top: 1rem;">
+                            Description</p>
+                        <p id="infoDescription" style="color: #d1d5db; line-height: 1.6; font-size: 0.85rem;">Loading...
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="modal-button" style="flex: 1;" onclick="launchExperience()">
+                        <i data-feather="play"
+                            style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 0.5rem;"></i>
+                        Launch Experience
+                    </button>
+                    <button class="modal-button"
+                        style="flex: 1; background: rgba(31, 41, 55, 0.8); border: 1px solid rgba(147, 51, 234, 0.5);"
+                        onclick="closeInfoModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USER_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnynm6H4YNmSWAXex3X5YBdePWWcSSFVXvUMa0DpA3OoERoRs-63Cm_DrSxmWSubaAWA/exec";
+        let currentExperienceUrl = ''; 
+
+        feather.replace();
+
+        function generateStars() {
+            const container = document.getElementById('starsContainer');
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                star.style.animationDelay = (Math.random() * 2) + 's';
+                container.appendChild(star);
+            }
+        }
+
+        // View Switching Logic
+        function switchView(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active-view');
+            });
+            
+            // Show target view
+            const target = document.getElementById(viewId);
+            if (target) {
+                target.classList.add('active-view');
+            }
+
+            // Update Navbar Active State
+            document.querySelectorAll('.nav-links a').forEach(a => {
+                a.classList.remove('active');
+                if (a.getAttribute('href') === '#' + viewId.replace('-view', '') || 
+                   (viewId === 'home-view' && a.getAttribute('href') === '#home')) {
+                    a.classList.add('active');
+                }
+            });
+            
+            // Reset scroll
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Navbar Click Handling
+        document.querySelectorAll('.nav-links a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                if (this.classList.contains('logout-btn')) return;
+
+                const targetHref = this.getAttribute('href');
+                
+                if (targetHref === '#account') {
+                    e.preventDefault();
+                    switchView('account-view');
+                } else if (targetHref === '#home') {
+                    e.preventDefault();
+                    switchView('home-view');
+                } else if (targetHref === '#ar-modes') {
+                    e.preventDefault();
+                    switchView('home-view');
+                    setTimeout(() => {
+                        document.getElementById('ar-modes').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+                
+                document.getElementById('navRight').classList.remove('active');
+            });
+        });
+
+        // Other utility functions
+        document.getElementById('menuToggle').addEventListener('click', () => {
+            document.getElementById('navRight').classList.toggle('active');
+        });
+
+        function showModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('modal');
+            if (e.target === modal) closeModal();
+            const infoModal = document.getElementById('infoModal');
+            if (e.target === infoModal) closeInfoModal();
+        });
+
+        const projectData = [
+             {
+                title: "3D Model Viewer",
+                image: "https://plus.unsplash.com/premium_photo-1681426687411-21986b0626a8?q=80&w=800&auto=format&fit=crop",
+                status: "Active",
+                date: "2024-01-15",
+                views: "2,847",
+                rating: "4.9 ⭐",
+                description: "An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models.",
+                url: "choose_blank_or_live.html"
+            },
+            {
+                title: "3D Shape Playground",
+                image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop",
+                status: "Beta",
+                date: "2024-02-20",
+                views: "1,523",
+                rating: "4.7 ⭐",
+                description: "Next-generation metaverse experience featuring full VR immersion with haptic feedback support.",
+                url: "Shape_Interaction.html"
+            },
+            {
+                title: "AR Portal",
+                image: "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=800&auto=format&fit=crop",
+                status: "Active",
+                date: "2023-12-10",
+                views: "3,891",
+                rating: "4.8 ⭐",
+                description: "Revolutionary architectural visualization tool allowing clients to walk through buildings before construction.",
+                url: "Portal_shortcut.html"
+            },
+            {
+                title: "AR Mini Game",
+                image: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=800&auto=format&fit=crop",
+                status: "Active",
+                date: "2024-03-05",
+                views: "5,234",
+                rating: "4.9 ⭐",
+                description: "Engaging AR gaming experience that blends virtual characters with real-world environments.",
+                url: "ar-game.html"
+            },
+            {
+                title: "Model Library",
+                image: "https://images.unsplash.com/photo-1617791160505-6f00504e3519?q=80&w=800&auto=format&fit=crop",
+                status: "New",
+                date: "2024-03-15",
+                views: "842",
+                rating: "5.0 ⭐",
+                description: "Access a comprehensive collection of high-quality 3D assets. Browse, preview, and select models.",
+                url: "model_lib.html"
+            }
+        ];
+
+        function showInfoModal(index) {
+            const project = projectData[index];
+            const modal = document.getElementById('infoModal');
+
+            currentExperienceUrl = project.url;
+
+            document.getElementById('infoTitle').textContent = project.title;
+            document.getElementById('infoImage').src = project.image;
+            document.getElementById('infoStatus').textContent = project.status;
+            document.getElementById('infoStatus').style.color = project.status === 'Active' ? '#10b981' : '#f59e0b';
+            document.getElementById('infoDate').textContent = project.date;
+            document.getElementById('infoViews').textContent = project.views;
+            document.getElementById('infoRating').textContent = project.rating;
+            document.getElementById('infoDescription').textContent = project.description;
+
+            modal.classList.add('active');
+            setTimeout(() => feather.replace(), 100);
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+
+        function launchExperience() {
+            if (currentExperienceUrl) {
+                window.location.href = currentExperienceUrl;
+            } else {
+                console.error("Error: No experience URL is set.");
+                alert('Launch Error: Could not find the URL for this experience.');
+            }
+        }
+        
+        async function loadUserProfile() {
+            const userEmail = sessionStorage.getItem('activeUserEmail');
+            
+            if (!userEmail) {
+                // Fallback for guest access if needed
+                document.getElementById('welcomeUserName').textContent = "Guest";
+                document.getElementById('displayUsernameSidebar').textContent = "Guest";
+                document.getElementById('avatarInitials').textContent = "G";
+                return;
+            }
+
+            // 1. Initial temporary UI update (derived from email)
+            let tempUsername = userEmail.split('@')[0];
+            tempUsername = tempUsername.charAt(0).toUpperCase() + tempUsername.slice(1);
+            
+            updateUserUI(tempUsername, userEmail, "Loading...");
+
+            // 2. Fetch real data from Google Sheet
+            try {
+                const response = await fetch(USER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'getUsers' })
+                });
+                const data = await response.json();
+                
+                if (data.result === 'success') {
+                    // Find the current user in the returned list
+                    const user = data.data.find(u => u.email === userEmail);
+                    if (user) {
+                        const date = new Date(user.timestamp).toISOString().split('T')[0];
+                        // Update UI with authoritative data
+                        updateUserUI(user.username, user.email, date);
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading user profile", e);
+            }
+        }
+
+        function updateUserUI(username, email, date) {
+            document.getElementById('welcomeUserName').textContent = username;
+            document.getElementById('displayUsernameSidebar').textContent = username;
+            document.getElementById('avatarInitials').textContent = username.substring(0, 2).toUpperCase();
+            
+            const inputUser = document.getElementById('inputUsername');
+            if(inputUser) inputUser.value = username;
+            
+            const inputEmail = document.getElementById('inputEmail');
+            if(inputEmail) inputEmail.value = email;
+            
+            const inputDate = document.getElementById('inputDate');
+            if(inputDate) inputDate.value = date;
+        }
+
+        async function handleUpdateProfile() {
+            const btn = document.querySelector('.btn-pro-primary');
+            const inputUser = document.getElementById('inputUsername');
+            const userEmail = sessionStorage.getItem('activeUserEmail');
+
+            // Check current state (Editable if readonly is missing)
+            const isEditing = !inputUser.hasAttribute('readonly');
+
+            if (!isEditing) {
+                // ENABLE EDIT MODE
+                inputUser.removeAttribute('readonly');
+                inputUser.focus();
+                inputUser.style.borderColor = '#7c3aed'; // Highlight border
+                btn.textContent = "Save Changes";
+            } else {
+                // SAVE CHANGES MODE
+                const newUsername = inputUser.value.trim();
+                if (!newUsername) {
+                    alert("Username cannot be empty.");
+                    return;
+                }
+
+                // Show loading state
+                const originalText = btn.textContent;
+                btn.textContent = "Saving...";
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch(USER_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({
+                            action: 'updateUser',
+                            email: userEmail,
+                            newUsername: newUsername
+                        })
+                    });
+                    
+                    const data = await response.json();
+
+                    if (data.result === 'success') {
+                        alert("Profile updated successfully.");
+                        
+                        // Update local UI elements immediately
+                        document.getElementById('welcomeUserName').textContent = newUsername;
+                        document.getElementById('displayUsernameSidebar').textContent = newUsername;
+                        document.getElementById('avatarInitials').textContent = newUsername.substring(0, 2).toUpperCase();
+                        
+                        // Reset Input State to Read-Only
+                        inputUser.setAttribute('readonly', 'true');
+                        inputUser.style.borderColor = ''; 
+                        btn.textContent = "Update Profile";
+                    } else {
+                        throw new Error(data.message || "Update failed");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to update profile: " + (e.message || "Network error"));
+                    // Keep in edit mode so user can retry
+                    btn.textContent = "Save Changes";
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function handleDeleteAccount() {
+            if(!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
+            
+            const userEmail = sessionStorage.getItem('activeUserEmail');
+            if(!userEmail) return;
+
+            // Show loading state or message
+            const btn = document.querySelector('.btn-pro-danger');
+            const originalText = btn.textContent;
+            btn.textContent = "Deleting...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(USER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'deleteUser', email: userEmail })
+                });
+                const data = await response.json();
+                
+                if(data.result === 'success') {
+                    alert("Account deleted successfully.");
+                    sessionStorage.clear();
+                    window.location.href = "index.html";
+                } else {
+                    alert("Failed to delete account: " + data.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                alert("Network error.");
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function handleLogout(event) {
+            event.preventDefault();
+            if(confirm("Are you sure you want to logout?")) {
+                sessionStorage.removeItem('activeUserEmail');
+                sessionStorage.removeItem('activeUserPassword');
+                window.location.href = "index.html";
+            }
+        }
+
+        generateStars();
+
+        document.addEventListener('DOMContentLoaded', function () {
+            feather.replace();
+            loadUserProfile(); 
+        });
+    </script>
+</body>
+</html>
