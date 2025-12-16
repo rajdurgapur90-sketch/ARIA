@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Model Viewer Component -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; overflow-x: hidden; }
+        
+        /* Background styles matching Login page */
+        .container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 25%, #2d1b4e 50%, #1a0a2e 75%, #0a0a1f 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .stars { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle ease-in-out infinite; box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); }
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
+        .glow-orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.3; pointer-events: none; z-index: 0; animation: floatOrb 20s ease-in-out infinite; }
+        .orb-1 { width: 400px; height: 400px; background: radial-gradient(circle, #9333ea, transparent); top: -100px; left: -100px; }
+        .orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, #ec4899, transparent); bottom: -150px; right: -150px; animation-delay: -5s; }
+        .orb-3 { width: 350px; height: 350px; background: radial-gradient(circle, #3b82f6, transparent); top: 50%; left: 50%; animation-delay: -10s; }
+        @keyframes floatOrb { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 33% { transform: translate(100px, -100px) rotate(120deg); } 66% { transform: translate(-100px, 100px) rotate(240deg); } }
+
+        /* Dashboard specific styles */
+        .dashboard { position: relative; z-index: 10; min-height: 100vh; display: flex; }
+        .sidebar { width: 16rem; background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(20px); border-right: 1px solid rgba(147, 51, 234, 0.5); transition: all 0.3s; overflow: hidden; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3); }
+        .sidebar.closed { width: 0; }
+        .sidebar-content { padding: 1.5rem; width: 16rem; }
+        .sidebar-header { display: flex; align-items: center; margin-bottom: 2rem; }
+        .sidebar-title { display: flex; align-items: center; gap: 0.75rem; }
+        .sidebar-icon { padding: 0.5rem; background: linear-gradient(135deg, #9333ea, #ec4899); border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4); }
+        .sidebar-icon svg { width: 24px; height: 24px; color: white; }
+        .sidebar-title-text h3 { color: white; font-size: 1rem; font-weight: 600; }
+        .sidebar-title-text p { color: #9ca3af; font-size: 0.75rem; }
+        .nav-menu { display: flex; flex-direction: column; gap: 0.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 0.75rem; color: #d1d5db; background: none; border: none; width: 100%; text-align: left; cursor: pointer; transition: all 0.3s; font-size: 1rem; position: relative; overflow: hidden; }
+        .nav-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(to bottom, #9333ea, #ec4899); transform: scaleY(0); transition: transform 0.3s ease; }
+        .nav-item:hover { background: rgba(55, 65, 81, 0.5); transform: translateX(5px); }
+        .nav-item.active { background: linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(236, 72, 153, 0.3)); color: white; border: 1px solid rgba(147, 51, 234, 0.5); }
+        .nav-item.active::before { transform: scaleY(1); }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .nav-parent { position: relative; }
+        .nav-arrow { width: 16px; height: 16px; margin-left: auto; transition: transform 0.3s ease; flex-shrink: 0; }
+        .nav-parent.expanded .nav-arrow { transform: rotate(180deg); }
+        .nav-submenu { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; margin-left: 1rem; }
+        .nav-submenu.expanded { max-height: 300px; }
+        .nav-subitem { display: flex; align-items: center; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 0.5rem; color: #9ca3af; background: none; border: none; width: 100%; text-align: left; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; position: relative; }
+        .nav-subitem::before { content: ''; position: absolute; left: 1.5rem; top: 50%; width: 6px; height: 6px; background: #6b7280; border-radius: 50%; transform: translateY(-50%); transition: all 0.3s; }
+        .nav-subitem:hover { color: #d1d5db; background: rgba(55, 65, 81, 0.3); }
+        .nav-subitem:hover::before { background: #a855f7; transform: translateY(-50%) scale(1.5); }
+        .nav-subitem.active { color: white; background: rgba(147, 51, 234, 0.2); border-left: 2px solid #a855f7; }
+        .nav-subitem.active::before { background: #a855f7; transform: translateY(-50%) scale(1.5); }
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .header { background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(147, 51, 234, 0.5); padding: 1rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); }
+        .header-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .header-right { display: flex; align-items: center; gap: 1rem; }
+        .menu-btn { padding: 0.5rem; background: rgba(55, 65, 81, 0.5); border: none; border-radius: 0.75rem; cursor: pointer; transition: all 0.3s; }
+        .menu-btn:hover { background: rgba(147, 51, 234, 0.3); transform: scale(1.05); }
+        .menu-btn svg { width: 24px; height: 24px; color: white; }
+        .header-title { font-size: 1.5rem; font-weight: bold; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .logout-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; border-radius: 0.75rem; cursor: pointer; transition: all 0.3s; font-size: 0.875rem; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); }
+        .logout-btn:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5); }
+        .logout-btn svg { width: 18px; height: 18px; }
+        
+        .main-window { flex: 1; padding: 1.5rem; overflow: auto; }
+        .content-card { background: rgba(17, 24, 39, 0.5); backdrop-filter: blur(20px); border-radius: 1.5rem; border: 1px solid rgba(147, 51, 234, 0.5); padding: 2rem; min-height: 100%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        .content-center { text-align: center; padding: 5rem 0; }
+        .content-icon { display: inline-block; padding: 1.5rem; background: linear-gradient(135deg, #9333ea, #ec4899); border-radius: 50%; margin-bottom: 1.5rem; animation: float 3s ease-in-out infinite; box-shadow: 0 10px 30px rgba(147, 51, 234, 0.5); }
+        .content-icon svg { width: 48px; height: 48px; color: white; }
+        .content-title { font-size: 1.875rem; font-weight: bold; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+        .content-description { color: #9ca3af; font-size: 1.125rem; }
+        
+        /* Experiences & Modal Styles */
+        .experiences-section { padding: 0; }
+        .section-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 2.5rem; text-align: center; background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .experiences-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2.5rem; }
+        .experience-card { position: relative; background: rgba(17, 24, 39, 0.6); border-radius: 1.5rem; overflow: hidden; cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1.5px solid rgba(147, 51, 234, 0.3); height: 350px; }
+        .experience-card:hover { transform: translateY(-15px) scale(1.02); border-color: rgba(147, 51, 234, 0.6); box-shadow: 0 25px 60px rgba(147, 51, 234, 0.5); }
+        .experience-image { width: 100%; height: 220px; object-fit: cover; transition: all 0.5s ease; }
+        .experience-card:hover .experience-image { transform: scale(1.15); }
+        .experience-info { padding: 1.75rem; position: relative; z-index: 1; }
+        .experience-info h3 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.5rem; background: linear-gradient(135deg, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .experience-info p { color: #9ca3af; font-size: 0.95rem; }
+        .experience-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 10, 31, 0.95), transparent); display: flex; align-items: flex-end; justify-content: center; padding: 2.5rem; opacity: 0; transition: all 0.4s ease; }
+        .experience-card:hover .experience-overlay { opacity: 1; }
+        .visit-button { padding: 1rem 2.5rem; background: linear-gradient(135deg, #9333ea, #ec4899); border: none; border-radius: 0.75rem; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4); }
+        .visit-button:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 40px rgba(147, 51, 234, 0.6); }
+        
+        /* User Table Styles */
+        .user-table-container { overflow-x: auto; background: rgba(31, 41, 55, 0.4); border-radius: 1rem; border: 1px solid rgba(147, 51, 234, 0.3); }
+        .user-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .user-table th { background: rgba(147, 51, 234, 0.2); padding: 1rem; text-align: left; font-weight: 600; color: #c084fc; border-bottom: 1px solid rgba(147, 51, 234, 0.3); }
+        .user-table td { padding: 1rem; color: #d1d5db; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .user-table tr:hover { background: rgba(255, 255, 255, 0.05); }
+        .action-btn { padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: none; color: white; cursor: pointer; transition: all 0.3s; font-size: 0.8rem; }
+        .btn-delete { background: rgba(220, 38, 38, 0.8); }
+        .btn-delete:hover { background: #dc2626; }
+        .loading-spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #c084fc; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 2rem auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Search Input Style */
+        .search-input { width: 100%; padding: 0.8rem 1rem; background: rgba(55, 65, 81, 0.5); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 0.75rem; color: white; font-size: 0.95rem; margin-bottom: 1rem; transition: all 0.3s; }
+        .search-input:focus { outline: none; border-color: #a855f7; box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2); background: rgba(55, 65, 81, 0.8); }
+
+        /* Manage Models Styles (New) */
+        .models-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; height: calc(100vh - 140px); }
+        @media (max-width: 768px) { .models-container { grid-template-columns: 1fr; height: auto; } }
+        .models-list-panel { background: rgba(17, 24, 39, 0.6); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 1rem; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+        .models-preview-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+        .model-list-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s; border-radius: 0.5rem; background: rgba(55, 65, 81, 0.2); }
+        .model-list-item:hover { background: rgba(147, 51, 234, 0.2); }
+        .model-list-item.selected { background: rgba(147, 51, 234, 0.4); border: 1px solid #a855f7; }
+        .model-name-group { display: flex; align-items: center; gap: 0.5rem; }
+        .model-name { font-weight: 500; color: #e5e7eb; }
+        .model-live-badge { font-size: 0.7rem; background: #10b981; color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; display: none; }
+        .model-list-item.is-live .model-live-badge { display: inline-block; }
+        .preview-box { flex: 1; background: black; border-radius: 1rem; border: 1px solid rgba(147, 51, 234, 0.3); overflow: hidden; position: relative; min-height: 300px; }
+        .preview-iframe { width: 100%; height: 100%; border: none; }
+        .preview-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #6b7280; flex-direction: column; gap: 1rem; }
+        .preview-loader { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .preview-loader.active { opacity: 1; pointer-events: all; }
+        .live-btn { width: 100%; padding: 1rem; border-radius: 0.75rem; font-weight: bold; cursor: pointer; transition: all 0.3s; border: none; color: white; background: rgba(55, 65, 81, 0.8); display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .live-btn.active { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .live-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Upload Layout */
+        .upload-container { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; height: 100%; }
+        @media (max-width: 900px) { .upload-container { grid-template-columns: 1fr; } }
+        .upload-form-panel { background: rgba(17, 24, 39, 0.6); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 1rem; padding: 2rem; }
+        .annotation-builder-panel { background: rgba(17, 24, 39, 0.6); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 1rem; padding: 1.5rem; display: flex; flex-direction: column; }
+        .builder-list { flex: 1; overflow-y: auto; margin: 1rem 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.2); }
+        .annotation-item { display: flex; justify-content: space-between; align-items: center; background: rgba(55, 65, 81, 0.5); padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 0.25rem; font-size: 0.85rem; }
+        .annotation-item button { color: #ef4444; background: none; border: none; cursor: pointer; }
+
+        /* Dashboard Home Styles */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: rgba(17, 24, 39, 0.6); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); border-color: #a855f7; }
+        .stat-icon-large { width: 50px; height: 50px; border-radius: 10px; background: rgba(168, 85, 247, 0.2); color: #c084fc; display: flex; align-items: center; justify-content: center; }
+        .stat-info h4 { color: #9ca3af; font-size: 0.85rem; margin-bottom: 0.25rem; }
+        .stat-info p { color: white; font-size: 1.5rem; font-weight: 700; }
+
+        .quick-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+        .quick-link-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .quick-link-card:hover { background: rgba(17, 24, 39, 0.8); border-color: #a855f7; transform: translateY(-3px); }
+        .quick-link-icon { margin: 0 auto 1rem; width: 48px; height: 48px; background: linear-gradient(135deg, #9333ea, #ec4899); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; }
+        .quick-link-card h3 { color: white; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .quick-link-card p { color: #9ca3af; font-size: 0.8rem; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem; animation: fadeIn 0.3s ease; }
+        .modal.active { display: flex; }
+        .modal-content { background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 1.5rem; padding: 2rem; max-width: 600px; width: 90%; text-align: left; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 25px 60px rgba(147, 51, 234, 0.4); position: relative; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: rgba(55, 65, 81, 0.5); border: none; color: #9ca3af; cursor: pointer; padding: 0.5rem; transition: all 0.3s; border-radius: 0.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+        .modal-close:hover { background: rgba(220, 38, 38, 0.3); color: white; transform: rotate(90deg); }
+        .modal-title { font-size: 1.7rem; font-weight: 600; margin-bottom: 1.5rem; background: linear-gradient(135deg, #9333ea, #ec4899, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .modal-image-container { margin-bottom: 1.5rem; border-radius: 1rem; overflow: hidden; border: 1px solid rgba(147, 51, 234, 0.3); }
+        .modal-image { width: 100%; height: 200px; object-fit: cover; }
+        .modal-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(0, 0, 0, 0.4); border-radius: 1rem; border: 1px solid rgba(147, 51, 234, 0.3); }
+        .stat-item { text-align: center; }
+        .stat-label { color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-weight: 700; font-size: 0.9rem; }
+        .stat-value.active { color: #10b981; } .stat-value.beta { color: #f59e0b; } .stat-value.date { color: #c084fc; } .stat-value.views { color: #818cf8; } .stat-value.rating { color: #f59e0b; }
+        .modal-description { background: rgba(0, 0, 0, 0.3); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(147, 51, 234, 0.2); margin-bottom: 1.5rem; }
+        .modal-description-title { color: #9ca3af; font-size: 0.85rem; margin-bottom: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .modal-description-text { color: #d1d5db; line-height: 1.6; font-size: 0.9rem; }
+        .modal-buttons { display: flex; gap: 1rem; }
+        .modal-button { flex: 1; padding: 1rem; background: linear-gradient(135deg, #9333ea, #ec4899); border: none; border-radius: 0.75rem; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4); display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .modal-button:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(147, 51, 234, 0.6); }
+        .modal-button.secondary { background: rgba(55, 65, 81, 0.8); border: 1px solid rgba(147, 51, 234, 0.5); box-shadow: none; }
+        .modal-button.secondary:hover { background: rgba(75, 85, 99, 0.8); }
+        
+        .home-section { text-align: center; padding: 6rem 2rem; }
+        .home-icon { display: inline-block; padding: 2.5rem; background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6); border-radius: 50%; margin-bottom: 2.5rem; animation: float 4s ease-in-out infinite; box-shadow: 0 20px 60px rgba(168, 85, 247, 0.6); position: relative; }
+        .home-icon::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6); opacity: 0.3; animation: pulse 2s ease-in-out infinite; z-index: -1; }
+        .home-icon svg { width: 72px; height: 72px; color: white; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3)); }
+        .home-title { font-size: 3.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1.5rem; line-height: 1.2; animation: fadeInUp 0.8s ease 0.2s both; }
+        .home-tagline { font-size: 1.6rem; background: linear-gradient(135deg, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2.5rem; font-weight: 600; animation: fadeInUp 0.8s ease 0.4s both; }
+        .home-description { font-size: 1.2rem; color: #d1d5db; max-width: 850px; margin: 0 auto; line-height: 1.9; animation: fadeInUp 0.8s ease 0.6s both; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hidden { display: none; }
+        
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            display: flex; align-items: flex-start; gap: 12px; padding: 16px;
+            background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            color: #fff; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transform: translateX(120%); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 350px; pointer-events: auto;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.info { border-left: 4px solid #3b82f6; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        .toast-icon { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; }
+        .toast.success .toast-icon { color: #10b981; }
+        .toast.info .toast-icon { color: #3b82f6; }
+        .toast.error .toast-icon { color: #ef4444; }
+        .toast-content { display: flex; flex-direction: column; gap: 2px; }
+        .toast-title { font-weight: 600; font-size: 0.95rem; color: #fff; }
+        .toast-message { font-size: 0.85rem; color: #9ca3af; line-height: 1.4; }
+
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; align-items: flex-start; }
+            .header-right { width: 100%; justify-content: space-between; }
+            .experiences-grid { grid-template-columns: 1fr; }
+            .modal-stats { grid-template-columns: repeat(2, 1fr); }
+            .modal-buttons { flex-direction: column; }
+            .home-title { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <div class="stars" id="starsContainer"></div>
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+
+        <div id="dashboardScreen" class="dashboard">
+            <aside id="sidebar" class="sidebar">
+                <div class="sidebar-content">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title">
+                            <div class="sidebar-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="sidebar-title-text">
+                                <h3>Admin Panel</h3>
+                                <p>Dashboard</p>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="nav-menu">
+                        <button class="nav-item active" data-section="dashboard-home">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                            <span>Dashboard</span>
+                        </button>
+                        <button class="nav-item" data-section="upload-model"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg><span>Upload Model</span></button>
+                        <button class="nav-item" data-section="manage-models"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg><span>Manage Models</span></button>
+                        <button class="nav-item" data-section="users"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg><span>Manage Users</span></button>
+                        <button class="nav-item" data-section="ar-modes"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><span>AR Modes</span></button>
+                        <div class="nav-submenu" id="modelViewerSubmenu">
+                            <button class="nav-subitem" data-section="model-viewer-home"><span>Viewer Home</span></button>
+                            <button class="nav-subitem" data-section="model-viewer-about"><span>About Viewer</span></button>
+                        </div>
+                        <!-- Removed Modify Data button -->
+                        <button class="nav-item" data-section="aria-about"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>About ARIA</span></button>
+                    </nav>
+                </div>
+            </aside>
+            <div class="main-content">
+                <header class="header">
+                    <div class="header-content">
+                        <div class="header-left">
+                            <button class="menu-btn" id="menuToggle">
+                                <svg id="menuIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <h1 class="header-title" id="headerTitle">Dashboard</h1>
+                        </div>
+                        <div class="header-right">
+                            <button class="logout-btn" id="logoutBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+                <main class="main-window">
+                    <div class="content-card" id="mainContent"></div>
+                </main>
+            </div>
+        </div>
+
+        <!-- MODALS -->
+        <div class="modal" id="infoModal">
+            <!-- ... existing info modal content ... -->
+            <div class="modal-content">
+                <button class="modal-close" id="closeModalBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <h3 class="modal-title" id="modalTitle">Project Details</h3>
+                <div class="modal-image-container"><img id="modalImage" class="modal-image" src="" alt="Project"></div>
+                <div class="modal-stats">
+                    <div class="stat-item"><p class="stat-label">Status</p><p class="stat-value active" id="modalStatus">Active</p></div>
+                    <div class="stat-item"><p class="stat-label">Created</p><p class="stat-value date" id="modalDate">2024-01-15</p></div>
+                    <div class="stat-item"><p class="stat-label">Views</p><p class="stat-value views" id="modalViews">1,234</p></div>
+                    <div class="stat-item"><p class="stat-label">Rating</p><p class="stat-value rating" id="modalRating">4.8 ⭐</p></div>
+                </div>
+                <div class="modal-description"><p class="modal-description-title">Description</p><p class="modal-description-text" id="modalDescription">Loading...</p></div>
+                <div class="modal-buttons">
+                    <button class="modal-button" id="launchButton">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:18px;height:18px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Launch Experience
+                    </button>
+                    <button class="modal-button secondary" id="closeModalFooterBtn">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="deleteConfirmModal">
+            <div class="modal-content" style="max-width: 450px; text-align: center;">
+                <div style="width: 80px; height: 80px; background: rgba(239, 68, 68, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 40px; height: 40px; color: #ef4444;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="modal-title" style="margin-bottom: 0.5rem; font-size: 1.5rem;" id="deleteTitle">Delete Item?</h3>
+                <p style="color: #9ca3af; margin-bottom: 2rem; line-height: 1.6;">
+                    Are you sure you want to delete <span id="deleteItemName" style="color: white; font-weight: 600;"></span>?
+                    <br>This action cannot be undone.
+                </p>
+                <div class="modal-buttons">
+                    <button class="modal-button secondary" id="cancelDeleteBtn">Cancel</button>
+                    <button class="modal-button" id="confirmDeleteBtn" style="background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USER_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnynm6H4YNmSWAXex3X5YBdePWWcSSFVXvUMa0DpA3OoERoRs-63Cm_DrSxmWSubaAWA/exec";
+        const MODEL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzGZq-XQUS7ky4alh5lSEBtFGbWrY2w74T1bFSh-_c_yFJo7Zu_IkLgII7jsK9lDFp3/exec";
+
+        const state = {
+            sidebarOpen: true,
+            activeSection: 'dashboard-home', // Default section
+            modelImageState: { previewImages: [] },
+            selectedModel: null,
+            modelsData: [],
+            usersData: [],
+            displayedModels: [],
+            // Annotation Builder State
+            currentAnnotations: []
+        };
+        
+        let itemToDelete = null; 
+        let deleteType = null;
+        let currentExperienceUrl = ''; // Added to store URL for launchExperience
+
+        // Updated AR Experiences with specific URLs and better images
+        const arExperiences = [
+            {
+                title: '3D Model Viewer',
+                desc: 'An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models. Users can explore every detail of the product in augmented reality, rotate, zoom, and see technical specifications in real-time.',
+                img: 'https://plus.unsplash.com/premium_photo-1681426687411-21986b0626a8?q=80&w=800&auto=format&fit=crop',
+                status: 'Active',
+                date: '2024-01-15',
+                views: '2,847',
+                rating: '4.9 ⭐',
+                fullDesc: 'An immersive AR experience showcasing high-precision measurement equipment with interactive 3D models. Users can explore every detail of the product in augmented reality, rotate, zoom, and see technical specifications in real-time.',
+                url: 'choose_blank_or_live.html'
+            },
+            {
+                title: '3D Shape Playground',
+                desc: 'Next-generation metaverse experience featuring full VR immersion with haptic feedback support. Enter virtual worlds with unprecedented realism and interact with digital environments like never before.',
+                img: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop',
+                status: 'Beta',
+                date: '2024-02-20',
+                views: '1,523',
+                rating: '4.7 ⭐',
+                fullDesc: 'Next-generation metaverse experience featuring full VR immersion with haptic feedback support. Enter virtual worlds with unprecedented realism and interact with digital environments like never before.',
+                url: 'Shape_Interaction.html'
+            },
+            {
+                title: 'AR Portal',
+                desc: 'Revolutionary architectural visualization tool allowing clients to walk through buildings before construction. Features real-time lighting, material changes, and spatial planning capabilities in augmented reality.',
+                img: 'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=800&auto=format&fit=crop',
+                status: 'Active',
+                date: '2023-12-10',
+                views: '3,891',
+                rating: '4.8 ⭐',
+                fullDesc: 'Revolutionary architectural visualization tool allowing clients to walk through buildings before construction. Features real-time lighting, material changes, and spatial planning capabilities in augmented reality.',
+                url: 'Portal_shortcut.html'
+            },
+            {
+                title: 'AR Mini Game',
+                desc: 'Engaging AR gaming experience that blends virtual characters with real-world environments. Features multiplayer support, location-based gameplay, and dynamic difficulty adjustment for maximum fun.',
+                img: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=800&auto=format&fit=crop',
+                status: 'Active',
+                date: '2024-03-05',
+                views: '5,234',
+                rating: '4.9 ⭐',
+                fullDesc: 'Engaging AR gaming experience that blends virtual characters with real-world environments. Features multiplayer support, location-based gameplay, and dynamic difficulty adjustment for maximum fun.',
+                url: 'ar-game.html'
+            }
+        ];
+
+        const menuItems = {
+            'dashboard-home': { label: 'Dashboard' },
+            'upload-model': { label: 'Upload Model', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+            // Removed Modify Data item
+            'aria-about': { label: 'About ARIA', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            'manage-models': { label: 'Manage Models', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+            users: { label: 'Manage Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+            'ar-modes': { label: 'AR Modes', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+            'model-viewer-home': { label: '3D Model Viewer - Home', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+            'model-viewer-upload': { label: '3D Model Viewer - Upload', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' },
+            'model-viewer-about': { label: '3D Model Viewer - About', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
+        };
+
+        // --- Helper Functions ---
+        function generateStars() {
+            const c = document.getElementById('starsContainer');
+            for (let i = 0; i < 200; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                const sz = Math.random() * 3 + 1;
+                s.style.width = sz + 'px';
+                s.style.height = sz + 'px';
+                s.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                s.style.animationDelay = (Math.random() * 2) + 's';
+                c.appendChild(s);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let iconSvg = '';
+            if (type === 'success') iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+            else if (type === 'error') iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
+            else iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
+            const title = type.charAt(0).toUpperCase() + type.slice(1);
+            toast.innerHTML = `<svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">${iconSvg}</svg><div class="toast-content"><span class="toast-title">${title}</span><span class="toast-message">${message}</span></div>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 4000);
+        }
+
+        function handleLogout() { window.location.href = 'index.html'; }
+
+        function toggleSidebar() {
+            state.sidebarOpen = !state.sidebarOpen;
+            const sb = document.getElementById('sidebar');
+            const mi = document.getElementById('menuIcon');
+            if (state.sidebarOpen) {
+                sb.classList.remove('closed');
+                mi.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
+            } else {
+                sb.classList.add('closed');
+                mi.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />';
+            }
+        }
+
+        function updateActiveSection(section) {
+            state.activeSection = section;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.dataset.section === section) item.classList.add('active');
+                else if (item.dataset.section === 'model-viewer' && section.startsWith('model-viewer')) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-subitem').forEach(item => {
+                if (item.dataset.section === section) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+
+            const item = menuItems[section];
+            if(item) document.getElementById('headerTitle').textContent = item.label;
+
+            const mc = document.getElementById('mainContent');
+            
+            // --- ROUTER ---
+            if (section === 'dashboard-home') {
+                renderDashboardHome();
+            } else if (section === 'ar-modes') {
+                // ... AR Modes content ...
+                mc.innerHTML = '<div class="experiences-section"><h2 class="section-title">AR Modes</h2><div class="experiences-grid">' + arExperiences.map((exp, idx) => `<div class="experience-card" onclick="showInfoModal(${idx})"><img src="${exp.img}" alt="${exp.title}" class="experience-image"><div class="experience-info"><h3>${exp.title}</h3><p>${exp.desc.substring(0, 80)}...</p></div></div>`).join('') + '</div></div>';
+            } else if (section === 'model-viewer-home') {
+                 mc.innerHTML = '<div class="model-viewer-container"><div class="home-section"><div class="home-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div><h1 class="home-title">Welcome to 3D Model Viewer</h1><p class="home-tagline">Explore, Upload, and Showcase Your 3D Creations</p><p class="home-description">Transform your 3D models into stunning interactive experiences.</p></div></div>';
+            } else if (section === 'upload-model') {
+                renderUploadSection();
+            } else if (section === 'model-viewer-about') {
+                 mc.innerHTML = '<div class="model-viewer-container"><div style="background: rgba(29, 15, 51, 0.7); backdrop-filter: blur(20px); border-radius: 24px; border: 2px solid #a855f7; padding: 3rem;"><h2 style="font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2.5rem; text-align: center;">About Us</h2><p style="color: #d1d5db; text-align: center; font-size: 1.2rem; line-height: 1.9;">We are passionate about making 3D visualization accessible to everyone.</p></div></div>';
+            } else if (section === 'users') {
+                renderUsersSection();
+            } else if (section === 'manage-models') {
+                renderModelsSection();
+            } else if (section === 'aria-about') {
+                // ADDED: Logic to render About ARIA details
+                mc.innerHTML = `
+                    <div class="content-card" style="text-align: center; padding: 4rem 2rem;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #9333ea, #ec4899); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; box-shadow: 0 10px 30px rgba(147, 51, 234, 0.5);">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white" style="width: 40px; height: 40px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h2 class="section-title">Project ARIA</h2>
+                        <p style="color: #c084fc; font-size: 1.2rem; margin-bottom: 3rem; margin-top: -1.5rem;">Augmented Reality Interactive Architecture</p>
+                        
+                        <div style="max-width: 800px; margin: 0 auto; text-align: left; background: rgba(31, 41, 55, 0.5); padding: 2.5rem; border-radius: 1rem; border: 1px solid rgba(147, 51, 234, 0.3);">
+                            <p style="color: #d1d5db; line-height: 1.8; margin-bottom: 2rem; font-size: 1.05rem;">
+                                <strong>ARIA</strong> is a comprehensive administrative system built for the next generation of spatial computing. It serves as the central nervous system for managing 3D assets, user interactions, and real-time AR experiences.
+                            </p>
+                            
+                            <h4 style="color: white; margin-bottom: 1rem;">Key Features</h4>
+                            <ul style="color: #9ca3af; line-height: 2; list-style: none; padding: 0;">
+                                <li style="display: flex; align-items: center; gap: 10px;"><span style="color: #10b981;">✓</span> <strong>Seamless Deployment:</strong> Instantly push 3D models to live AR environments.</li>
+                                <li style="display: flex; align-items: center; gap: 10px;"><span style="color: #10b981;">✓</span> <strong>User Management:</strong> Granular control over administrative access and user roles.</li>
+                                <li style="display: flex; align-items: center; gap: 10px;"><span style="color: #10b981;">✓</span> <strong>Analytics:</strong> Real-time tracking of asset engagement and performance.</li>
+                                <li style="display: flex; align-items: center; gap: 10px;"><span style="color: #10b981;">✓</span> <strong>Immersive Previews:</strong> Integrated WebXR viewers for immediate quality assurance.</li>
+                            </ul>
+                            
+                            <div style="margin-top: 3rem; text-align: center; color: #6b7280; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                                Version 2.4.0-beta &bull; Developed by ARIA Team &bull; © 2025
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                 mc.innerHTML = '<div class="content-center"><div class="content-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="' + item.icon + '" /></svg></div><h2 class="content-title">' + item.label + '</h2><p class="content-description">This is your main workspace. Content and functionality for ' + section + ' will appear here.</p></div>';
+            }
+        }
+
+        // --- DASHBOARD HOME ---
+        function renderDashboardHome() {
+            // Calculate Active AR Modes
+            const activeARModes = arExperiences.filter(exp => exp.status === 'Active').length;
+
+            const mc = document.getElementById('mainContent');
+            mc.innerHTML = `
+                <div style="text-align: center; padding: 4rem 1rem;">
+                    <h2 class="section-title" style="margin-bottom: 0.5rem; font-size: 3rem;">Welcome Admin</h2>
+                    <p style="color: white; font-size: 1.2rem; margin-bottom: 4rem; opacity: 0.9;">Overview of your spatial computing ecosystem and real-time performance.</p>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon-large"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg></div>
+                            <div class="stat-info">
+                                <h4>Total Models</h4>
+                                <p>${state.modelsData.length || '...'}</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-large" style="background: rgba(16, 185, 129, 0.1); color: var(--success);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                            <div class="stat-info">
+                                <h4>Active Live</h4>
+                                <p>${state.modelsData.filter(m => m.live).length || '0'}</p>
+                            </div>
+                        </div>
+                         <div class="stat-card">
+                            <div class="stat-icon-large" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg></div>
+                            <div class="stat-info">
+                                <h4>Users</h4>
+                                <p>${state.usersData.length || '...'}</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-large" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Active AR Modes</h4>
+                                <p>${activeARModes}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            // Silently fetch data to populate stats
+            loadModels(true); 
+            loadUsers(true);
+        }
+
+        // --- MANAGE MODELS LOGIC ---
+        function renderModelsSection() {
+            const mc = document.getElementById('mainContent');
+            mc.innerHTML = `
+                <div class="models-container">
+                    <!-- Left: Models List -->
+                    <div class="models-list-panel">
+                        <h3 style="color: #c084fc; font-weight: 600; margin-bottom: 0.5rem; font-size: 1.2rem;">Model Library</h3>
+                         <div style="margin-bottom: 1rem;">
+                            <input type="text" id="modelSearchInput" class="search-input" placeholder="Search models...">
+                        </div>
+                        <div id="modelsList" style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Preview & Actions -->
+                    <div class="models-preview-panel">
+                        <div class="preview-box">
+                            <div id="previewLoader" class="preview-loader"><div class="loading-spinner"></div></div>
+                            <model-viewer id="modelPreviewer" src="" camera-controls auto-rotate shadow-intensity="1" style="width: 100%; height: 100%; display: none; background-color: #000;"></model-viewer>
+                            <div id="previewPlaceholder" class="preview-placeholder">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 48px; height: 48px; opacity: 0.5;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>
+                                <span>Select a model to preview</span>
+                            </div>
+                        </div>
+                        <button id="setLiveBtn" class="live-btn" disabled onclick="handleSetLive()">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            Set As Live Model
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add listeners after elements are created
+            const viewer = document.getElementById('modelPreviewer');
+            if (viewer) {
+                viewer.addEventListener('load', () => {
+                    const loader = document.getElementById('previewLoader');
+                    if(loader) loader.classList.remove('active');
+                });
+                viewer.addEventListener('error', (e) => {
+                    const loader = document.getElementById('previewLoader');
+                    if(loader) loader.classList.remove('active');
+                    showToast('Failed to load model', 'error');
+                });
+            }
+
+            const searchInput = document.getElementById('modelSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = state.modelsData.filter(m => m.name.toLowerCase().includes(term));
+                    renderModelsList(filtered);
+                });
+            }
+
+            loadModels();
+        }
+
+        async function loadModels(silent = false) {
+            const listEl = document.getElementById('modelsList');
+            if (!listEl && !silent) return;
+            
+            try {
+                const response = await fetch(MODEL_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'getModels' })
+                });
+                const data = await response.json();
+
+                if (data.result === 'success') {
+                    state.modelsData = data.data; // array of { name, link, annotations, live }
+                    if (!silent) renderModelsList(state.modelsData);
+                    // Update stats if on dashboard home
+                    if(state.activeSection === 'dashboard-home') renderDashboardHome();
+                } else {
+                    if (!silent) listEl.innerHTML = `<p style="color: #ef4444; padding: 1rem;">${data.message}</p>`;
+                }
+            } catch (error) {
+                if (!silent) listEl.innerHTML = `<p style="color: #ef4444; padding: 1rem;">Network Error</p>`;
+            }
+        }
+
+        function renderModelsList(modelsToRender) {
+            const listEl = document.getElementById('modelsList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            
+            state.displayedModels = modelsToRender || state.modelsData;
+
+            if (state.displayedModels.length === 0) {
+                listEl.innerHTML = '<p style="color: #9ca3af; padding: 1rem;">No models found.</p>';
+                return;
+            }
+
+            state.displayedModels.forEach((model, index) => {
+                const item = document.createElement('div');
+                item.className = `model-list-item ${model.live === true ? 'is-live' : ''}`;
+                if (state.selectedModel && state.selectedModel.name === model.name) item.classList.add('selected');
+                
+                item.innerHTML = `
+                    <div class="model-name-group">
+                        <span class="model-name">${model.name}</span>
+                        <span class="model-live-badge">LIVE</span>
+                    </div>
+                    <button class="action-btn btn-delete" onclick="prepareDeleteModel('${model.name}')" style="padding: 4px 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                `;
+                item.onclick = (e) => {
+                    if (e.target.closest('.btn-delete')) return;
+                    selectModel(index);
+                };
+                listEl.appendChild(item);
+            });
+        }
+
+        function selectModel(index) {
+            state.selectedModel = state.displayedModels[index];
+            renderModelsList(state.displayedModels); // Re-render to show selection highlight
+
+            // Update Preview
+            const placeholder = document.getElementById('previewPlaceholder');
+            const viewer = document.getElementById('modelPreviewer');
+            const liveBtn = document.getElementById('setLiveBtn');
+            const loader = document.getElementById('previewLoader');
+
+            if (placeholder) placeholder.style.display = 'none';
+            if (loader) loader.classList.add('active'); // Show loader
+
+            if (viewer) {
+                viewer.src = state.selectedModel.link;
+                viewer.style.display = 'block';
+                viewer.alt = state.selectedModel.name;
+            }
+
+            if (liveBtn) {
+                liveBtn.disabled = false;
+                if (state.selectedModel.live === true) {
+                    liveBtn.classList.add('active');
+                    liveBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Currently Live';
+                } else {
+                    liveBtn.classList.remove('active');
+                    liveBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> Set As Live Model';
+                }
+            }
+        }
+
+        async function handleSetLive() {
+            if (!state.selectedModel) return;
+            const name = state.selectedModel.name;
+            
+            showToast(`Setting ${name} as LIVE...`, 'info');
+            
+            try {
+                const response = await fetch(MODEL_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'setLive', name: name })
+                });
+                const data = await response.json();
+                
+                if (data.result === 'success') {
+                    showToast('Live model updated!', 'success');
+                    // Update local state to reflect change immediately without full reload if preferred, 
+                    // but simple reload ensures consistency.
+                    loadModels(); 
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
+            }
+        }
+
+        function prepareDeleteModel(name) {
+            itemToDelete = name;
+            deleteType = 'model';
+            document.getElementById('deleteTitle').textContent = "Delete Model?";
+            document.getElementById('deleteItemName').textContent = name;
+            document.getElementById('deleteConfirmModal').classList.add('active');
+        }
+
+        // --- USER MANAGEMENT LOGIC (Modified to remove heading) ---
+        function renderUsersSection() {
+            const mc = document.getElementById('mainContent');
+            mc.innerHTML = `
+                <div class="experiences-section">
+                     <!-- Heading Removed as requested -->
+                    
+                    <!-- Add User Form -->
+                    <div style="background: rgba(17, 24, 39, 0.5); backdrop-filter: blur(12px); border-radius: 1rem; border: 1px solid rgba(147, 51, 234, 0.3); padding: 1.5rem; margin-bottom: 2rem;">
+                        <h3 style="color: #c084fc; font-weight: 600; margin-bottom: 1rem;">Add New User</h3>
+                        <form id="addUserForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+                            <div>
+                                <label style="display: block; color: #9ca3af; font-size: 0.85rem; margin-bottom: 0.5rem;">Username</label>
+                                <input type="text" id="newUsername" required style="width: 100%; padding: 0.6rem; border-radius: 0.5rem; background: rgba(55, 65, 81, 0.5); border: 1px solid rgba(75, 85, 99, 0.5); color: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; color: #9ca3af; font-size: 0.85rem; margin-bottom: 0.5rem;">Email</label>
+                                <input type="email" id="newEmail" required style="width: 100%; padding: 0.6rem; border-radius: 0.5rem; background: rgba(55, 65, 81, 0.5); border: 1px solid rgba(75, 85, 99, 0.5); color: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; color: #9ca3af; font-size: 0.85rem; margin-bottom: 0.5rem;">Password</label>
+                                <input type="password" id="newPassword" required style="width: 100%; padding: 0.6rem; border-radius: 0.5rem; background: rgba(55, 65, 81, 0.5); border: 1px solid rgba(75, 85, 99, 0.5); color: white;">
+                            </div>
+                            <button type="submit" class="modal-button" style="height: 42px;">Add User</button>
+                        </form>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <input type="text" id="userSearchInput" class="search-input" placeholder="Search users...">
+                    </div>
+
+                    <!-- User Table -->
+                    <div id="usersTableContainer" class="user-table-container">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('addUserForm').addEventListener('submit', handleAddUser);
+            
+            const searchInput = document.getElementById('userSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = state.usersData.filter(u => 
+                        u.username.toLowerCase().includes(term) || 
+                        u.email.toLowerCase().includes(term)
+                    );
+                    renderUserTable(filtered);
+                });
+            }
+
+            loadUsers();
+        }
+
+        async function loadUsers(silent = false) {
+            const container = document.getElementById('usersTableContainer');
+            try {
+                const response = await fetch(USER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'getUsers' })
+                });
+                const data = await response.json();
+
+                if (data.result === 'success') {
+                    state.usersData = data.data; // Store users in state
+                    if (!silent && container) renderUserTable(state.usersData);
+                    // Update stats if on dashboard home
+                    if(state.activeSection === 'dashboard-home') renderDashboardHome();
+                } else {
+                    if (!silent && container) container.innerHTML = `<p style="padding: 1rem; color: #ef4444;">Error loading users: ${data.message}</p>`;
+                }
+            } catch (error) {
+                if (!silent && container) container.innerHTML = '<p style="padding: 1rem; color: #ef4444;">Network error while fetching users.</p>';
+            }
+        }
+        
+        function renderUserTable(usersToRender) {
+             const container = document.getElementById('usersTableContainer');
+             if (!container) return;
+             
+             if (usersToRender.length === 0) {
+                container.innerHTML = '<p style="padding: 2rem; text-align: center; color: #9ca3af;">No users found.</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            usersToRender.forEach(user => {
+                const date = new Date(user.timestamp).toLocaleDateString();
+                tableHtml += `
+                    <tr>
+                        <td>${user.username || '-'}</td>
+                        <td>${user.email}</td>
+                        <td>${date}</td>
+                        <td>
+                            <button class="action-btn btn-delete" onclick="prepareDeleteUser('${user.email}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+        }
+
+        async function handleAddUser(e) {
+            e.preventDefault();
+            const u = document.getElementById('newUsername').value;
+            const em = document.getElementById('newEmail').value;
+            const p = document.getElementById('newPassword').value;
+            showToast('Adding user...', 'info');
+            try {
+                const response = await fetch(USER_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'addUser', username: u, email: em, password: p })
+                });
+                const data = await response.json();
+                if (data.result === 'success') {
+                    showToast('User added successfully', 'success');
+                    document.getElementById('addUserForm').reset();
+                    loadUsers();
+                } else {
+                    showToast(data.message || 'Failed to add user', 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            }
+        }
+
+        function prepareDeleteUser(email) {
+            itemToDelete = email;
+            deleteType = 'user';
+            document.getElementById('deleteTitle').textContent = "Delete User?";
+            document.getElementById('deleteItemName').textContent = email;
+            document.getElementById('deleteConfirmModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('active');
+            itemToDelete = null;
+            deleteType = null;
+        }
+        
+        function closeModal() { document.getElementById('infoModal').classList.remove('active'); }
+        
+        function showInfoModal(i) {
+            const exp = arExperiences[i];
+            
+            // Store URL for launching
+            currentExperienceUrl = exp.url;
+
+            document.getElementById('modalTitle').textContent = exp.title;
+            document.getElementById('modalImage').src = exp.img;
+            document.getElementById('modalStatus').textContent = exp.status;
+            document.getElementById('modalDate').textContent = exp.date;
+            document.getElementById('modalViews').textContent = exp.views;
+            document.getElementById('modalRating').textContent = exp.rating;
+            document.getElementById('modalDescription').textContent = exp.fullDesc;
+            document.getElementById('infoModal').classList.add('active');
+        }
+        
+        function launchExperience() {
+            if (currentExperienceUrl) {
+                closeModal();
+                showToast('Launching Experience...', 'info');
+                // Use a slight timeout to allow toast to appear before navigation
+                setTimeout(() => {
+                    window.location.href = currentExperienceUrl;
+                }, 500);
+            } else {
+                showToast('Error: No URL configured for this experience.', 'error');
+            }
+        }
+
+        // Unified Delete Confirmation
+        document.getElementById('confirmDeleteBtn').onclick = async function() {
+            if (!itemToDelete) return;
+            const item = itemToDelete;
+            const type = deleteType;
+            closeDeleteModal(); 
+
+            showToast(`Deleting ${type}...`, 'info');
+
+            // Determine action and URL based on type
+            const action = type === 'user' ? 'deleteUser' : 'deleteModel';
+            const url = type === 'user' ? USER_SCRIPT_URL : MODEL_SCRIPT_URL;
+            const payload = type === 'user' ? { action: action, email: item } : { action: action, name: item };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.result === 'success') {
+                    showToast(`${type === 'user' ? 'User' : 'Model'} deleted`, 'success');
+                    if (type === 'user') loadUsers();
+                    else loadModels();
+                } else {
+                    showToast(data.message || 'Delete failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            }
+        };
+
+        // --- NEW RENDER UPLOAD SECTION ---
+        function renderUploadSection() {
+            const mc = document.getElementById('mainContent');
+            mc.innerHTML = `
+                <div class="upload-container">
+                    <!-- Form Side -->
+                    <div class="upload-form-panel">
+                        <h2 class="modal-title" style="margin-bottom: 2rem;">Upload Model Data</h2>
+                        <form id="uploadModelForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            
+                            <div>
+                                <label class="stat-label" style="display: block;">Model Name</label>
+                                <input type="text" id="upModelName" required class="search-input" style="width: 100%; margin-bottom: 0;" placeholder="e.g. Robot X-1">
+                            </div>
+
+                            <div>
+                                <label class="stat-label" style="display: block;">Model Link (URL)</label>
+                                <input type="url" id="upModelLink" required class="search-input" style="width: 100%; margin-bottom: 0;" placeholder="https://example.com/model.glb">
+                            </div>
+                            
+                             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="upModelLive" style="width: 18px; height: 18px; accent-color: #10b981;">
+                                <label for="upModelLive" style="color: white; cursor: pointer;">Set as Live Model?</label>
+                            </div>
+
+                            <div>
+                                <label class="stat-label" style="display: block;">Annotations (JSON)</label>
+                                <textarea id="finalAnnotations" readonly class="search-input" style="width: 100%; height: 120px; font-family: monospace; font-size: 0.8rem; margin-bottom: 0; resize: vertical;" placeholder="Use the builder on the right..."></textarea>
+                            </div>
+
+                            <button type="submit" class="live-btn active" style="margin-top: 1rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:20px;height:20px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Upload to Database
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Annotation Builder Side -->
+                    <div class="annotation-builder-panel">
+                        <h3 style="color: #c084fc; font-weight: 600; margin-bottom: 1rem;">Annotation Builder</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <input type="text" id="annTitle" class="search-input" style="margin: 0; padding: 0.6rem;" placeholder="Title (e.g. Engine)">
+                            <input type="text" id="annDesc" class="search-input" style="margin: 0; padding: 0.6rem;" placeholder="Short description...">
+                            
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="annX" class="search-input" style="margin: 0; padding: 0.6rem;" placeholder="X" step="0.1">
+                                <input type="number" id="annY" class="search-input" style="margin: 0; padding: 0.6rem;" placeholder="Y" step="0.1">
+                                <input type="number" id="annZ" class="search-input" style="margin: 0; padding: 0.6rem;" placeholder="Z" step="0.1">
+                            </div>
+
+                            <button onclick="addAnnotation()" class="modal-button secondary" style="padding: 0.8rem;">+ Add Point</button>
+                        </div>
+
+                        <div style="margin-top: 1.5rem; color: #9ca3af; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">Added Points</div>
+                        <div id="annotationList" class="builder-list">
+                            <!-- Items go here -->
+                            <p style="text-align: center; color: #6b7280; font-size: 0.8rem; padding: 1rem;">No annotations yet.</p>
+                        </div>
+                        
+                        <button onclick="clearAnnotations()" style="background: none; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; align-self: flex-end;">Clear All</button>
+                    </div>
+                </div>
+            `;
+            
+            // Reset local annotation state when view loads
+            state.currentAnnotations = [];
+            
+            // Bind Submit
+            document.getElementById('uploadModelForm').addEventListener('submit', handleUploadModel);
+        }
+
+        function addAnnotation() {
+            const t = document.getElementById('annTitle').value;
+            const d = document.getElementById('annDesc').value;
+            const x = parseFloat(document.getElementById('annX').value) || 0;
+            const y = parseFloat(document.getElementById('annY').value) || 0;
+            const z = parseFloat(document.getElementById('annZ').value) || 0;
+
+            if(!t) { showToast("Title is required", "error"); return; }
+
+            const newAnn = {
+                title: t,
+                description: d,
+                position: { x: x, y: y, z: z }
+            };
+
+            state.currentAnnotations.push(newAnn);
+            renderAnnotationList();
+            updateJsonOutput();
+
+            // Clear inputs
+            document.getElementById('annTitle').value = "";
+            document.getElementById('annDesc').value = "";
+            document.getElementById('annX').value = "";
+            document.getElementById('annY').value = "";
+            document.getElementById('annZ').value = "";
+        }
+
+        function renderAnnotationList() {
+            const list = document.getElementById('annotationList');
+            if (state.currentAnnotations.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.8rem; padding: 1rem;">No annotations yet.</p>';
+                return;
+            }
+            list.innerHTML = '';
+            state.currentAnnotations.forEach((ann, index) => {
+                const el = document.createElement('div');
+                el.className = 'annotation-item';
+                el.innerHTML = `
+                    <span><strong>${ann.title}</strong> <span style="color:#9ca3af; font-size:0.7rem;">(${ann.position.x}, ${ann.position.y}, ${ann.position.z})</span></span>
+                    <button onclick="removeAnnotation(${index})">×</button>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        window.removeAnnotation = function(index) {
+            state.currentAnnotations.splice(index, 1);
+            renderAnnotationList();
+            updateJsonOutput();
+        }
+
+        window.clearAnnotations = function() {
+            state.currentAnnotations = [];
+            renderAnnotationList();
+            updateJsonOutput();
+        }
+
+        function updateJsonOutput() {
+            const ta = document.getElementById('finalAnnotations');
+            if(ta) ta.value = JSON.stringify(state.currentAnnotations);
+        }
+
+        async function handleUploadModel(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('upModelName').value;
+            const link = document.getElementById('upModelLink').value;
+            const live = document.getElementById('upModelLive').checked;
+            let annotations = document.getElementById('finalAnnotations').value;
+            
+            if(!annotations) annotations = "[]"; // Default empty array
+
+            showToast("Uploading model...", "info");
+
+            try {
+                const response = await fetch(MODEL_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: 'addModel', 
+                        name: name, 
+                        link: link, 
+                        annotations: annotations,
+                        live: live
+                    })
+                });
+                const data = await response.json();
+
+                if (data.result === 'success') {
+                    showToast("Model Uploaded Successfully!", "success");
+                    // Reset Form
+                    document.getElementById('uploadModelForm').reset();
+                    state.currentAnnotations = [];
+                    renderAnnotationList();
+                } else {
+                    showToast(data.message || "Upload failed", "error");
+                }
+            } catch (error) {
+                showToast("Network Error", "error");
+            }
+        }
+
+
+        document.getElementById('logoutBtn').onclick = handleLogout;
+        document.getElementById('menuToggle').onclick = toggleSidebar;
+        
+        // --- FIXED: Explicitly bind close handlers ---
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        if (closeModalBtn) closeModalBtn.onclick = closeModal;
+
+        const closeModalFooterBtn = document.getElementById('closeModalFooterBtn');
+        if (closeModalFooterBtn) closeModalFooterBtn.onclick = closeModal;
+
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        if (cancelDeleteBtn) cancelDeleteBtn.onclick = closeDeleteModal;
+
+        const launchButton = document.getElementById('launchButton');
+        if (launchButton) launchButton.onclick = launchExperience;
+
+        const mvp = document.querySelector('[data-section="model-viewer"]');
+        if (mvp) {
+            mvp.onclick = function (e) {
+                e.stopPropagation();
+                const sm = document.getElementById('modelViewerSubmenu');
+                const isExp = sm.classList.contains('expanded');
+                if (isExp) { sm.classList.remove('expanded'); this.classList.remove('expanded'); }
+                else { sm.classList.add('expanded'); this.classList.add('expanded'); updateActiveSection('model-viewer-home'); }
+            };
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.dataset.section !== 'model-viewer') {
+                item.onclick = () => updateActiveSection(item.dataset.section);
+            }
+        });
+
+        document.querySelectorAll('.nav-subitem').forEach(item => {
+            item.onclick = e => { e.stopPropagation(); updateActiveSection(item.dataset.section); };
+        });
+
+        document.getElementById('infoModal').onclick = function (e) { if (e.target === this) closeModal(); };
+
+        // Ensure to close modal if clicking outside
+        document.getElementById('deleteConfirmModal').onclick = function (e) { 
+            if (e.target === this) closeDeleteModal(); 
+        };
+        
+        // Expose functions to window just in case
+        window.handleSetLive = handleSetLive;
+        window.prepareDeleteModel = prepareDeleteModel;
+        window.prepareDeleteUser = prepareDeleteUser; // also for user delete
+        window.closeModal = closeModal;
+        window.closeDeleteModal = closeDeleteModal;
+        window.showInfoModal = showInfoModal;
+        window.launchExperience = launchExperience;
+        // Make updateActiveSection global so the quick links in dashboard can call it
+        window.updateActiveSection = updateActiveSection; 
+
+        generateStars();
+        updateActiveSection('dashboard-home'); // Updated Default
+    </script>
+</body>
+</html>
