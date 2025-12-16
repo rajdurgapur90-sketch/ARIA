@@ -142,14 +142,14 @@
             color: white;
             border-radius: 8px;
             font-size: 13px;
-            width: 220px; /* Increased width for more text */
-            white-space: normal; /* Allow text to wrap to multiple lines */
+            width: 220px; 
+            white-space: normal; 
             overflow: hidden;
-            line-height: 1.4; /* Improve readability */
+            line-height: 1.4; 
         }
         .annotation-title {
             font-weight: bold;
-            color: #c084fc; /* Theme color */
+            color: #c084fc; 
             margin-bottom: 5px;
             display: block;
             border-bottom: 1px solid rgba(192, 132, 252, 0.3);
@@ -160,7 +160,7 @@
 
 
         /* --- CSS 3D Cube Loader (Themed) --- */
-        #loading-overlay { background-color: rgba(15, 5, 23, 0.8); } /* Dark purple transparent */
+        #loading-overlay { background-color: rgba(15, 5, 23, 0.8); } 
         #loading-cube-container { width: 50px; height: 50px; perspective: 400px; margin-bottom: 2rem; }
         #loading-cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: rotate-cube 8s infinite linear; }
         .cube-face {
@@ -310,6 +310,9 @@
         let annotations = [], annotationsVisible = false;
         let areHandsVisible = true;
         
+        // --- NEW: PASSED ANNOTATIONS VARIABLE ---
+        let passedAnnotations = null;
+
         // --- Initialization and Setup ---
         function setLoading(isLoading, text = "Processing...") {
             loadingOverlay.querySelector('#loading-text').textContent = text;
@@ -848,53 +851,11 @@
             annotationDetailsModal.classList.remove('visible');
             isAnnotationDetailsModalVisible = false;
         }
+        
+        // MODIFIED: Create Annotations Function
         function createAnnotations() {
             clearAnnotations(); if (!currentObject) return;
-            const annotationDetails = [
-                {
-                    title: "Ion Engine Core",
-                    description: "Primary propulsion unit utilizing advanced ion thrusters. Generates silent, efficient thrust for long-duration missions. Power output is currently at 85% capacity. Plasma temperature is stable at 4.5 million Kelvin. This is a critical system."
-                },
-                {
-                    title: "Articulated Joint",
-                    description: "A primary servo-actuated joint. Allows for 270 degrees of rotation on the primary axis and 180 on the secondary. Composed of a titanium-graphite composite. Last maintenance cycle was two weeks ago, showing minimal wear."
-                },
-                {
-                    title: "Cryo-Cell Battery",
-                    description: "Main power storage holding a cryogenic charge. Provides up to 72 hours of continuous operation under standard load. Current charge level: 92.3%. Features a self-regulating thermal vent system."
-                },
-                {
-                    title: "Plasma Exhaust Port",
-                    description: "Vents superheated plasma from the core reactor. The magnetic containment field is operating within all nominal parameters. It is crucial to keep this area clear of any and all debris to ensure efficient operation."
-                },
-                {
-                    title: "Multi-Spectrum Sensor",
-                    description: "Advanced sensor array detecting electromagnetic signatures. Scans across infrared, ultraviolet, and gamma rays. Data is processed in real-time by the onboard AI. Optimal detection range is 500 kilometers."
-                },
-                {
-                    title: "Ablative Armor Plating",
-                    description: "Composed of a unique ceramic-metallic alloy. This plating is designed to ablate upon impact, dissipating massive amounts of energy. Structural integrity is holding at 99.8%. Minor micrometeoroid pitting detected on the outer layers."
-                },
-                {
-                    title: "Hydraulic Actuator",
-                    description: "Controls fine motor movements for limbs and manipulators. Operates at a standard pressure of 3000 PSI. Fluid levels are nominal and the system is triple-redundant for safety."
-                },
-                {
-                    title: "Primary Optical Lens",
-                    description: "The main visual input for navigation and targeting. Features a 200x optical zoom and a variable aperture. The lens is protected by a sapphire crystal cover to resist impacts."
-                }
-            ];
-
-            let mesh = null; currentObject.traverse(child => { if (child.isMesh && !mesh) mesh = child; });
-            if (!mesh || !mesh.geometry.attributes.position) return;
             
-            const vertexCount = mesh.geometry.attributes.position.count;
-            
-            const shuffledDetails = [...annotationDetails].sort(() => 0.5 - Math.random());
-
-            const detailsList = document.getElementById('annotation-details-list');
-            detailsList.innerHTML = ''; // Clear previous details
-
             const offsets = [
                 { side: 'left', distance: 70 },
                 { side: 'right', distance: 70 },
@@ -902,56 +863,83 @@
                 { side: 'right', distance: 130 },
                 { side: 'left', distance: 190 }
             ];
-
-            // --- NEW: Select well-separated points ---
-            const selectedPoints = [];
-            if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
-            const modelSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
-            const minDistance = Math.max(modelSize.x, modelSize.y, modelSize.z) * 0.25; // 25% of largest dimension
-            const maxTries = 1000;
-            let tries = 0;
-
-            while (selectedPoints.length < 5 && tries < maxTries) {
-                tries++;
-                const randomIndex = Math.floor(Math.random() * vertexCount);
-                const candidatePoint = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex);
-
-                let isFarEnough = true;
-                for (const point of selectedPoints) {
-                    if (candidatePoint.distanceTo(point) < minDistance) {
-                        isFarEnough = false;
-                        break;
-                    }
-                }
-
-                if (isFarEnough) {
-                    selectedPoints.push(candidatePoint);
-                }
-            }
             
-            // Fallback: If the algorithm fails, fill the rest with purely random points
-            while (selectedPoints.length < 5) {
-                const randomIndex = Math.floor(Math.random() * vertexCount);
-                selectedPoints.push(new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex));
+            const detailsList = document.getElementById('annotation-details-list');
+            detailsList.innerHTML = ''; 
+
+            let pointsToUse = [];
+            
+            // 1. CHECK IF ANNOTATIONS WERE PASSED FROM URL
+            if (passedAnnotations && passedAnnotations.length > 0) {
+                // Use passed annotations
+                pointsToUse = passedAnnotations.map((ann, i) => {
+                    return {
+                        position: new THREE.Vector3(ann.position.x, ann.position.y, ann.position.z),
+                        title: ann.title,
+                        description: ann.description
+                    };
+                });
+            } else {
+                // 2. FALLBACK TO DEFAULT RANDOM GENERATION
+                const annotationDetails = [
+                    { title: "Ion Engine Core", description: "Primary propulsion unit utilizing advanced ion thrusters." },
+                    { title: "Articulated Joint", description: "A primary servo-actuated joint." },
+                    { title: "Cryo-Cell Battery", description: "Main power storage holding a cryogenic charge." },
+                    { title: "Plasma Exhaust Port", description: "Vents superheated plasma from the core reactor." },
+                    { title: "Multi-Spectrum Sensor", description: "Advanced sensor array detecting electromagnetic signatures." },
+                    { title: "Ablative Armor Plating", description: "Composed of a unique ceramic-metallic alloy." },
+                    { title: "Hydraulic Actuator", description: "Controls fine motor movements for limbs and manipulators." },
+                    { title: "Primary Optical Lens", description: "The main visual input for navigation and targeting." }
+                ];
+
+                let mesh = null; currentObject.traverse(child => { if (child.isMesh && !mesh) mesh = child; });
+                if (!mesh || !mesh.geometry.attributes.position) return;
+                
+                const vertexCount = mesh.geometry.attributes.position.count;
+                if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+                const modelSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+                const minDistance = Math.max(modelSize.x, modelSize.y, modelSize.z) * 0.25;
+                const shuffledDetails = [...annotationDetails].sort(() => 0.5 - Math.random());
+                
+                let selectedPoints = [];
+                let tries = 0;
+                while (selectedPoints.length < 5 && tries < 1000) {
+                    tries++;
+                    const randomIndex = Math.floor(Math.random() * vertexCount);
+                    const candidatePoint = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex);
+                    let isFarEnough = true;
+                    for (const point of selectedPoints) {
+                        if (candidatePoint.distanceTo(point) < minDistance) { isFarEnough = false; break; }
+                    }
+                    if (isFarEnough) selectedPoints.push(candidatePoint);
+                }
+                while (selectedPoints.length < 5) {
+                    const randomIndex = Math.floor(Math.random() * vertexCount);
+                    selectedPoints.push(new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, randomIndex));
+                }
+
+                pointsToUse = selectedPoints.map((pos, i) => {
+                    const detail = shuffledDetails[i % shuffledDetails.length];
+                    return {
+                        position: pos,
+                        title: detail.title,
+                        description: detail.description
+                    };
+                });
             }
 
-
-            selectedPoints.forEach((localPos, i) => {
+            // 3. RENDER THE POINTS (Used for both paths)
+            pointsToUse.forEach((item, i) => {
                 const annotationElement = document.createElement('div');
                 annotationElement.className = 'annotation';
                 
-                const detail = shuffledDetails[i % shuffledDetails.length];
-                const sentences = detail.description.split('. ');
-                const sentenceCount = Math.floor(Math.random() * (sentences.length - 2)) + 2;
-                const randomLengthDescription = sentences.slice(0, sentenceCount).join('. ');
-                // MODIFIED: Only show the title in the annotation window
-                const annotationHTML = `<strong class="annotation-title">${detail.title}</strong>`;
-                // NEW: Populate the details modal list
+                const annotationHTML = `<strong class="annotation-title">${item.title}</strong>`;
+                
                 const listItem = document.createElement('li');
-                listItem.innerHTML = `<strong>${detail.title}:</strong><span>${randomLengthDescription}</span>`;
+                listItem.innerHTML = `<strong>${item.title}:</strong><span>${item.description || ''}</span>`;
                 detailsList.appendChild(listItem);
 
-                const config = offsets[i];
+                const config = offsets[i % offsets.length]; // Cycle offsets
                 const onLeftSide = config.side === 'left';
                 const distance = config.distance;
                 let svgHTML, windowTransform;
@@ -979,12 +967,13 @@
 
                 annotationElement.innerHTML = `${svgHTML}<div class="annotation-window" style="${windowTransform}">${annotationHTML}</div>`;
                 annotationContainer.appendChild(annotationElement);
-                annotations.push({ element: annotationElement, anchorPointLocal: localPos });
+                annotations.push({ element: annotationElement, anchorPointLocal: item.position });
             });
+
             annotationsVisible = true;
-            // NEW: Show the details button
             annotationDetailsButtonContainer.classList.remove('hidden');
         }
+
         function updateAnnotations() {
             if (!currentObject || annotations.length === 0) return;
             if (!annotationsVisible) { for (const ann of annotations) ann.element.classList.remove('visible'); return; }
@@ -1159,6 +1148,15 @@
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('modelUrl');
             const modelName = urlParams.get('modelName');
+            // Check for annotations
+            const annotationsParam = urlParams.get('modelAnnotations');
+            if (annotationsParam) {
+                try {
+                    passedAnnotations = JSON.parse(decodeURIComponent(annotationsParam));
+                } catch (e) {
+                    console.error("Error parsing passed annotations:", e);
+                }
+            }
 
             if (modelUrl) {
                 loadModel({ name: decodeURIComponent(modelName) || 'Uploaded Model', file: decodeURIComponent(modelUrl) });
@@ -1172,4 +1170,3 @@
     </script>
 </body>
 </html>
-
