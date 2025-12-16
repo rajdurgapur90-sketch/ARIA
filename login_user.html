@@ -225,6 +225,7 @@
 
     <script>
         // --- CONFIGURATION ---
+        // NOTE: Ensure this URL correctly points to your Google Apps Script Web App
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-QpQtj42Nr5i-Sy6w-mmHDpA7XddMRW0ZD-K_xD7sBtaR1qQtWU9BvPuxWs_Ks98gUQ/exec"; 
 
         const state = {
@@ -362,6 +363,12 @@
                         if (r) localStorage.setItem('rememberedEmail', e);
                         else localStorage.removeItem('rememberedEmail');
                         
+                        // --- UPDATED CODE START ---
+                        // Forward credentials via sessionStorage
+                        sessionStorage.setItem('activeUserEmail', e);
+                        sessionStorage.setItem('activeUserPassword', p);
+                        // --- UPDATED CODE END ---
+
                         showToast('Login successful! Redirecting...', 'success');
                         setTimeout(() => window.location.href = 'user_dashboard.html', 1500);
                     } else {
@@ -377,8 +384,6 @@
         }
 
         function handleRegister() {
-            // This function is kept for logic consistency if toggling within same page,
-            // but in separate page setup, register logic is in register.html
             // Re-directing user to register.html
             window.location.href = 'register.html';
         }
