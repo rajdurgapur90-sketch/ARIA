@@ -107,10 +107,6 @@
         .btn-primary.loading .spinner { display: block; }
         .btn-primary.loading span { display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .toggle-auth { margin-top: 1.5rem; text-align: center; }
-        .toggle-auth button { background: none; border: none; color: #c084fc; font-size: 0.875rem; cursor: pointer; transition: all 0.3s; padding: 0.5rem; }
-        .toggle-auth button:hover { color: #d8b4fe; text-decoration: underline; }
         
         .hidden { display: none; }
 
@@ -216,9 +212,6 @@
                         <div class="spinner"></div>
                     </button>
                 </form>
-                <div class="toggle-auth">
-                    <button type="button" id="toggleAuthMode">Don't have an account? Register</button>
-                </div>
             </div>
         </div>
     </div>
@@ -376,18 +369,6 @@
             }
         }
 
-        function handleRegister() {
-            // This function is kept for logic consistency if toggling within same page,
-            // but in separate page setup, register logic is in register.html
-            // Re-directing user to register.html
-            window.location.href = 'register.html';
-        }
-
-        function toggleAuthMode() {
-            // Since we split the pages, this button now just redirects
-            window.location.href = 'register.html';
-        }
-
         function togglePasswordVisibility(inputId, buttonId) {
             const inp = document.getElementById(inputId);
             const btn = document.getElementById(buttonId);
@@ -399,7 +380,6 @@
         }
 
         document.getElementById('authForm').onsubmit = e => { e.preventDefault(); handleLogin(); };
-        document.getElementById('toggleAuthMode').onclick = toggleAuthMode;
         document.getElementById('togglePassword').onclick = () => togglePasswordVisibility('password', 'togglePassword');
         document.getElementById('toggleConfirmPassword').onclick = () => togglePasswordVisibility('confirmPassword', 'toggleConfirmPassword');
         document.getElementById('password').oninput = function (e) {
