@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIA: Terraformer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- MediaPipe Vision -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Inter', sans-serif; user-select: none; }
+        
+        /* UI Overlay - Using Grid for placement */
+        #ui-layer { 
+            position: fixed; inset: 0; pointer-events: none; z-index: 50; 
+            display: grid; 
+            grid-template-rows: 1fr auto 1fr; /* Top, Center, Bottom */
+            grid-template-columns: 1fr auto 1fr; /* Left, Center, Right */
+            padding: 20px;
+        }
+        
+        /* Center the toolbar */
+        .center-container {
+            grid-row: 2;
+            grid-column: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-bar {
+            display: flex; gap: 15px; pointer-events: auto;
+            background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(16px);
+            padding: 15px 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .tool-bar.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+
+        .tool-btn {
+            width: 70px; height: 70px; border-radius: 16px; border: none; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #1e3a8a; font-size: 0.75rem; font-weight: 700;
+            transition: all 0.2s; background: rgba(255,255,255,0.4);
+            border: 2px solid transparent;
+        }
+        
+        .tool-btn.hovered { transform: scale(1.1); background: rgba(255,255,255,0.8); border-color: #3b82f6; z-index: 10; }
+        
+        .tool-btn.active { 
+            background: linear-gradient(135deg, #2563eb, #7c3aed); 
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); 
+        }
+        
+        .tool-icon { font-size: 1.8rem; margin-bottom: 2px; }
+
+        /* Top Right Status Text */
+        .top-right-container {
+            grid-row: 1;
+            grid-column: 3;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+        }
+
+        #status-text {
+            text-align: right; color: #1e3a8a; font-size: 0.9rem; font-weight: 600;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 12px;
+            backdrop-filter: blur(4px);
+            white-space: pre-line;
+        }
+
+        #hand-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+        #three-container { position: fixed; inset: 0; z-index: 10; }
+        
+        #loading {
+            position: fixed; inset: 0; background: #87CEEB; z-index: 100;
+            display: flex; align-items: center; justify-content: center; flex-direction: column; color: #1e3a8a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Scene -->
+    <div id="three-container"></div>
+    <canvas id="hand-overlay"></canvas>
+
+    <!-- UI -->
+    <div id="ui-layer">
+        <!-- Top Right Guide -->
+        <div class="top-right-container">
+            <div id="status-text">Initializing...</div>
+        </div>
+
+        <!-- Center Menu -->
+        <div class="center-container">
+            <div class="tool-bar" id="main-toolbar">
+                <div class="tool-btn active" id="btn-raise">
+                    <span class="tool-icon">▲</span> Raise
+                </div>
+                <div class="tool-btn" id="btn-lower">
+                    <span class="tool-icon">▼</span> Lower
+                </div>
+                <div class="tool-btn" id="btn-plant">
+                    <span class="tool-icon">🌲</span> Plant
+                </div>
+                <div class="tool-btn" id="btn-hands">
+                    <span class="tool-icon">👁️</span> Hand
+                </div>
+                <div class="tool-btn" id="btn-reset" style="color: #dc2626;">
+                    <span class="tool-icon">↺</span> Reset
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading">
+        <div class="text-2xl font-bold animate-bounce">Forging Sky World...</div>
+    </div>
+
+    <script type="module">
+        import { HandLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
+
+        // --- Custom Water Shader ---
+        const WaterShader = {
+            uniforms: {
+                uTime: { value: 0 },
+                // Bland, desaturated colors
+                uColorDeep: { value: new THREE.Color(0x2a4a5e) }, // Muted Slate Blue
+                uColorShallow: { value: new THREE.Color(0x8daab3) } // Pale Grey-Blue
+            },
+            vertexShader: `
+                uniform float uTime;
+                varying float vElevation;
+                varying vec2 vUv;
+
+                void main() {
+                    vUv = uv;
+                    vec3 pos = position;
+                    
+                    // Simple sine wave simulation
+                    float elevation = sin(pos.x * 2.0 + uTime) * 0.2;
+                    elevation += sin(pos.y * 1.5 + uTime * 0.5) * 0.2;
+                    elevation += cos(pos.x * 5.0 + uTime * 1.5) * 0.05;
+
+                    pos.z += elevation;
+                    vElevation = elevation;
+
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 uColorDeep;
+                uniform vec3 uColorShallow;
+                varying float vElevation;
+
+                void main() {
+                    // Mix colors based on wave height
+                    float mixStrength = (vElevation + 0.2) * 2.5; 
+                    vec3 color = mix(uColorDeep, uColorShallow, mixStrength);
+                    
+                    // Add subtle highlight at peaks
+                    if(vElevation > 0.35) {
+                        color = mix(color, vec3(1.0), 0.3);
+                    }
+
+                    // High transparency (0.5 alpha) for see-through water
+                    gl_FragColor = vec4(color, 0.5); 
+                }
+            `
+        };
+
+        // --- Simplex Noise Implementation (Minimal) ---
+        const SimplexNoise = (function() {
+            function Grad(x, y, z) { this.x = x; this.y = y; this.z = z; }
+            Grad.prototype.dot2 = function(x, y) { return this.x*x + this.y*y; };
+            var grad3 = [new Grad(1,1,0),new Grad(-1,1,0),new Grad(1,-1,0),new Grad(-1,-1,0),
+                         new Grad(1,0,1),new Grad(-1,0,1),new Grad(1,0,-1),new Grad(-1,0,-1),
+                         new Grad(0,1,1),new Grad(0,-1,1),new Grad(0,1,-1),new Grad(0,-1,-1)];
+            var perm = new Array(512); var gradP = new Array(512);
+            function seed(seed) {
+                if(seed > 0 && seed < 1) seed *= 65536;
+                seed = Math.floor(seed);
+                if(seed < 256) seed |= seed << 8;
+                for(var i=0; i<256; i++) {
+                    var v; if (i & 1) v = p[i] ^ (seed & 255); else v = p[i] ^ ((seed>>8) & 255);
+                    perm[i] = perm[i + 256] = v;
+                    gradP[i] = gradP[i + 256] = grad3[v % 12];
+                }
+            };
+            seed(0);
+            return {
+                seed: seed,
+                noise2D: function(xin, yin) {
+                    var n0, n1, n2; var F2 = 0.5*(Math.sqrt(3.0)-1.0); var s = (xin+yin)*F2; var i = Math.floor(xin+s); var j = Math.floor(yin+s); var G2 = (3.0-Math.sqrt(3.0))/6.0; var t = (i+j)*G2; var X0 = i-t; var Y0 = j-t; var x0 = xin-X0; var y0 = yin-Y0;
+                    var i1, j1; if(x0>y0) {i1=1; j1=0;} else {i1=0; j1=1;}
+                    var x1 = x0 - i1 + G2; var y1 = y0 - j1 + G2; var x2 = x0 - 1.0 + 2.0 * G2; var y2 = y0 - 1.0 + 2.0 * G2;
+                    var ii = i & 255; var jj = j & 255;
+                    var gi0 = gradP[ii+perm[jj]]; var gi1 = gradP[ii+i1+perm[jj+j1]]; var gi2 = gradP[ii+1+perm[jj+1]];
+                    var t0 = 0.5 - x0*x0 - y0*y0; if(t0<0) n0 = 0.0; else { t0 *= t0; n0 = t0 * t0 * gi0.dot2(x0, y0); }
+                    var t1 = 0.5 - x1*x1 - y1*y1; if(t1<0) n1 = 0.0; else { t1 *= t1; n1 = t1 * t1 * gi1.dot2(x1, y1); }
+                    var t2 = 0.5 - x2*x2 - y2*y2; if(t2<0) n2 = 0.0; else { t2 *= t2; n2 = t2 * t2 * gi2.dot2(x2, y2); }
+                    return 70.0 * (n0 + n1 + n2);
+                }
+            };
+        })();
+
+        // --- Global State ---
+        let scene, camera, renderer, raycaster;
+        let terrainMesh, waterMesh, cursorMesh, worldGroup;
+        let handLandmarker, videoElement, canvasCtx, drawingUtils;
+        let activeTool = 'raise'; 
+        let isPinching = false;
+        let isRotating = false;
+        let areHandsVisible = true;
+        let isMenuVisible = true;
+        
+        // Interaction State
+        let rotateLastHandPos = new THREE.Vector2();
+        let hoveredButtonId = null;
+        let clickDebounce = false;
+        let punchDebounce = false;
+        let trees = [];
+        let initialZoomDist = null;
+        let waterUniforms;
+        
+        // Settings
+        const WORLD_SIZE = 40;
+        const RES = 64; 
+        
+        window.onload = async () => {
+            initThreeJS();
+            generateTerrain();
+            await initHandTracking();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('status-text').innerText = "Ready.\nFist: Menu | Pinch: Action\nIndex+Middle: Rotate\n2-Hand Pinch: Zoom";
+            animate();
+        };
+
+        // --- Tool & UI Logic ---
+        function handleButtonHover(screenX, screenY) {
+            if (!isMenuVisible) return;
+
+            const buttons = ['btn-raise', 'btn-lower', 'btn-plant', 'btn-hands', 'btn-reset'];
+            let foundHover = null;
+
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                const rect = btn.getBoundingClientRect();
+                if (screenX >= rect.left && screenX <= rect.right &&
+                    screenY >= rect.top && screenY <= rect.bottom) {
+                    btn.classList.add('hovered');
+                    foundHover = id;
+                } else {
+                    btn.classList.remove('hovered');
+                }
+            });
+            hoveredButtonId = foundHover;
+        }
+
+        function triggerButtonClick(id) {
+            if (!id) return;
+            const btn = document.getElementById(id);
+            btn.style.transform = "scale(0.9)";
+            setTimeout(() => btn.style.transform = "", 150);
+
+            if (id === 'btn-raise') setTool('raise');
+            else if (id === 'btn-lower') setTool('lower');
+            else if (id === 'btn-plant') setTool('plant');
+            else if (id === 'btn-hands') toggleHands();
+            else if (id === 'btn-reset') generateTerrain();
+        }
+
+        window.setTool = (tool) => {
+            activeTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`btn-${tool}`);
+            if(btn) btn.classList.add('active');
+            
+            if(cursorMesh) {
+                if(tool === 'raise') cursorMesh.material.color.setHex(0x2563eb);
+                if(tool === 'lower') cursorMesh.material.color.setHex(0xd97706);
+                if(tool === 'plant') cursorMesh.material.color.setHex(0x16a34a);
+            }
+        };
+
+        window.toggleHands = () => {
+            areHandsVisible = !areHandsVisible;
+            const btn = document.getElementById('btn-hands');
+            if(areHandsVisible) btn.style.opacity = "1";
+            else btn.style.opacity = "0.5";
+        };
+
+        function toggleMenu() {
+            isMenuVisible = !isMenuVisible;
+            const bar = document.getElementById('main-toolbar');
+            if (isMenuVisible) bar.classList.remove('hidden');
+            else bar.classList.add('hidden');
+        }
+
+        window.generateTerrain = () => {
+            if(terrainMesh) worldGroup.remove(terrainMesh);
+            if(waterMesh) worldGroup.remove(waterMesh);
+            trees.forEach(t => worldGroup.remove(t));
+            trees = [];
+
+            SimplexNoise.seed(Math.random());
+
+            // 1. Terrain Geometry
+            const geometry = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, RES, RES);
+            const count = geometry.attributes.position.count;
+            
+            for (let i = 0; i < count; i++) {
+                const x = geometry.attributes.position.getX(i);
+                const y = geometry.attributes.position.getY(i);
+                let height = 
+                    SimplexNoise.noise2D(x * 0.1, y * 0.1) * 4 + 
+                    SimplexNoise.noise2D(x * 0.3, y * 0.3) * 1.5;
+                
+                geometry.attributes.position.setZ(i, height);
+            }
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({ 
+                vertexColors: true, flatShading: true, roughness: 0.8, side: THREE.DoubleSide
+            });
+
+            terrainMesh = new THREE.Mesh(geometry, material);
+            terrainMesh.rotation.x = -Math.PI / 2;
+            terrainMesh.receiveShadow = true;
+            terrainMesh.castShadow = true;
+            worldGroup.add(terrainMesh);
+
+            // 2. Water Plane (Using Custom Shader)
+            const waterGeometry = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, RES*2, RES*2); // Higher res for smooth waves
+            waterUniforms = THREE.UniformsUtils.clone(WaterShader.uniforms);
+            
+            const waterMaterial = new THREE.ShaderMaterial({
+                uniforms: waterUniforms,
+                vertexShader: WaterShader.vertexShader,
+                fragmentShader: WaterShader.fragmentShader,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+
+            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+            waterMesh.rotation.x = -Math.PI / 2;
+            waterMesh.position.y = -1.5; // Sea Level
+            worldGroup.add(waterMesh);
+
+            updateTerrainColors();
+        }
+
+        function updateTerrainColors() {
+            const geometry = terrainMesh.geometry;
+            const count = geometry.attributes.position.count;
+            const colors = [];
+            
+            const cSand = new THREE.Color(0xfcd34d);
+            const cGrass = new THREE.Color(0x4ade80);
+            const cRock = new THREE.Color(0x78716c);
+            const cSnow = new THREE.Color(0xffffff);
+            const cSeabed = new THREE.Color(0x1e3a8a); // Dark blue for underwater terrain
+
+            for (let i = 0; i < count; i++) {
+                const h = geometry.attributes.position.getZ(i);
+                let color;
+                
+                // Color terrain based on height relative to water level (-1.5)
+                if (h < -1.5) color = cSeabed;
+                else if (h < 0) color = cSand;
+                else if (h < 3.5) color = cGrass;
+                else if (h < 6) color = cRock;
+                else color = cSnow;
+                
+                colors.push(color.r, color.g, color.b);
+            }
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.attributes.color.needsUpdate = true;
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('three-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 15, 60);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(0, 25, 30);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            worldGroup = new THREE.Group();
+            scene.add(worldGroup);
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x87CEEB, 0.8);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(15, 30, 15);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            const cursorGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const cursorMat = new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.6 });
+            cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
+            scene.add(cursorMesh);
+
+            raycaster = new THREE.Raycaster();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        async function initHandTracking() {
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+            handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
+                runningMode: "VIDEO",
+                numHands: 2 
+            });
+
+            videoElement = document.createElement("video");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            videoElement.srcObject = stream;
+            videoElement.play();
+
+            const canvas = document.getElementById('hand-overlay');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvasCtx = canvas.getContext('2d');
+            drawingUtils = new DrawingUtils(canvasCtx);
+        }
+
+        function applyTool(point) {
+            const localPoint = terrainMesh.worldToLocal(point.clone());
+
+            if (activeTool === 'plant') {
+                if (Math.random() > 0.9) spawnTree(point);
+                return;
+            }
+
+            const geometry = terrainMesh.geometry;
+            const positions = geometry.attributes.position;
+            const radius = 4.0;
+            let modified = false;
+
+            const localX = localPoint.x;
+            const localY = localPoint.y; 
+
+            for (let i = 0; i < positions.count; i++) {
+                const vx = positions.getX(i);
+                const vy = positions.getY(i);
+                const dist = Math.sqrt((vx - localX)**2 + (vy - localY)**2);
+                
+                if (dist < radius) {
+                    const oldH = positions.getZ(i);
+                    const falloff = Math.cos((dist / radius) * (Math.PI / 2));
+                    const strength = 0.2 * falloff;
+                    
+                    if (activeTool === 'raise') positions.setZ(i, oldH + strength);
+                    else positions.setZ(i, oldH - strength);
+                    
+                    modified = true;
+                }
+            }
+
+            if (modified) {
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+                updateTerrainColors();
+            }
+        }
+
+        function spawnTree(worldPos) {
+            const group = new THREE.Group();
+            
+            const trunkGeo = new THREE.CylinderGeometry(0.1, 0.2, 0.8, 6);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 0.4;
+            trunk.castShadow = true;
+            group.add(trunk);
+
+            const leavesGeo = new THREE.ConeGeometry(0.6, 1.2, 6);
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x16a34a });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.y = 1.0;
+            leaves.castShadow = true;
+            group.add(leaves);
+
+            const localPos = worldGroup.worldToLocal(worldPos.clone());
+            group.position.copy(localPos);
+            
+            if(localPos.y > -1.0) {
+                group.scale.setScalar(0.8 + Math.random() * 0.5);
+                group.rotation.y = Math.random() * Math.PI;
+                worldGroup.add(group);
+                trees.push(group);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // --- Animate Water ---
+            if(waterUniforms) {
+                waterUniforms.uTime.value += 0.05; // Speed of waves
+            }
+
+            if (handLandmarker && videoElement.readyState >= 3) {
+                const results = handLandmarker.detectForVideo(videoElement, performance.now());
+                canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
+
+                if (results.landmarks.length === 2) {
+                    const h1 = results.landmarks[0];
+                    const h2 = results.landmarks[1];
+                    const p1 = Math.hypot(h1[8].x - h1[4].x, h1[8].y - h1[4].y) < 0.05;
+                    const p2 = Math.hypot(h2[8].x - h2[4].x, h2[8].y - h2[4].y) < 0.05;
+
+                    if (p1 && p2) {
+                        const c1 = {x: (h1[8].x + h1[4].x)/2, y: (h1[8].y + h1[4].y)/2};
+                        const c2 = {x: (h2[8].x + h2[4].x)/2, y: (h2[8].y + h2[4].y)/2};
+                        const dist = Math.hypot(c1.x - c2.x, c1.y - c2.y);
+
+                        if (initialZoomDist !== null) {
+                            const delta = (dist - initialZoomDist) * 80;
+                            const forward = new THREE.Vector3();
+                            camera.getWorldDirection(forward);
+                            camera.position.addScaledVector(forward, delta);
+                        }
+                        initialZoomDist = dist;
+                        document.getElementById('status-text').textContent = "Zooming...";
+                        renderer.render(scene, camera);
+                        return;
+                    }
+                }
+                initialZoomDist = null;
+
+                if (results.landmarks.length > 0) {
+                    const landmarks = results.landmarks[0];
+                    
+                    if (areHandsVisible) {
+                        canvasCtx.save();
+                        canvasCtx.scale(-1, 1);
+                        canvasCtx.translate(-canvasCtx.canvas.width, 0);
+                        drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, { color: "#3b82f6", lineWidth: 3 });
+                        drawingUtils.drawLandmarks(landmarks, { color: "#ffffff", radius: 4 });
+                        canvasCtx.restore();
+                    }
+
+                    const indexTip = landmarks[8];
+                    const middleTip = landmarks[12];
+                    const thumbTip = landmarks[4];
+                    const indexPip = landmarks[6]; 
+                    const wrist = landmarks[0];
+
+                    const fingers = [
+                        {tip: 8, pip: 6}, {tip: 12, pip: 10}, {tip: 16, pip: 14}, {tip: 20, pip: 18}
+                    ];
+                    let curledCount = 0;
+                    fingers.forEach(f => {
+                        const dTip = Math.hypot(landmarks[f.tip].x - wrist.x, landmarks[f.tip].y - wrist.y);
+                        const dPip = Math.hypot(landmarks[f.pip].x - wrist.x, landmarks[f.pip].y - wrist.y);
+                        if (dTip < dPip) curledCount++;
+                    });
+                    
+                    if (curledCount >= 3) {
+                        if (!punchDebounce) {
+                            toggleMenu();
+                            punchDebounce = true;
+                            const status = document.getElementById('status-text');
+                            status.textContent = isMenuVisible ? "Menu Open" : "Menu Closed";
+                            setTimeout(() => { punchDebounce = false; }, 800);
+                        }
+                        return; 
+                    }
+
+                    const screenX = (1 - indexTip.x) * window.innerWidth;
+                    const screenY = indexTip.y * window.innerHeight;
+
+                    handleButtonHover(screenX, screenY);
+
+                    const clickDist = Math.hypot(thumbTip.x - indexPip.x, thumbTip.y - indexPip.y);
+                    const isClicking = clickDist < 0.06;
+
+                    if (isClicking && hoveredButtonId && !clickDebounce) {
+                        triggerButtonClick(hoveredButtonId);
+                        clickDebounce = true;
+                        setTimeout(() => { clickDebounce = false; }, 500);
+                        return; 
+                    }
+
+                    const rotateDist = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y);
+                    const isRotateGesture = rotateDist < 0.05;
+
+                    if (isRotateGesture) {
+                        document.getElementById('status-text').textContent = "Rotating World...";
+                        cursorMesh.visible = false;
+                        const currentX = indexTip.x;
+                        const currentY = indexTip.y;
+                        
+                        if (isRotating) {
+                            const deltaX = currentX - rotateLastHandPos.x;
+                            const deltaY = currentY - rotateLastHandPos.y;
+                            worldGroup.rotation.y -= deltaX * 4;
+                            worldGroup.rotation.x += deltaY * 4; 
+                        }
+                        isRotating = true;
+                        rotateLastHandPos.set(indexTip.x, indexTip.y);
+                    } 
+                    else {
+                        isRotating = false;
+                        if (!hoveredButtonId) {
+                            document.getElementById('status-text').innerText = "Index: Move\nThumb+Pip: Click\n2-Hand Pinch: Zoom";
+                        }
+
+                        const ndc = new THREE.Vector2((1 - indexTip.x) * 2 - 1, -indexTip.y * 2 + 1);
+                        raycaster.setFromCamera(ndc, camera);
+                        const intersects = raycaster.intersectObject(terrainMesh);
+
+                        if (intersects.length > 0 && !hoveredButtonId) {
+                            const hit = intersects[0];
+                            cursorMesh.position.copy(hit.point);
+                            cursorMesh.visible = true;
+
+                            const pinchDist = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
+                            isPinching = pinchDist < 0.05;
+
+                            if(isPinching) {
+                                cursorMesh.scale.setScalar(0.5);
+                                applyTool(hit.point);
+                            } else {
+                                cursorMesh.scale.setScalar(1.0);
+                            }
+                        } else {
+                            cursorMesh.visible = false;
+                        }
+                    }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
+```
